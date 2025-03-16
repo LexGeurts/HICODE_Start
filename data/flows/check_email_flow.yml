@@ -1,0 +1,29 @@
+version: "3.1"
+
+flows:
+  - name: check_emails_flow
+    priority: 1
+    conditions:
+      - intent: check_email
+      - not:
+        - active_flow: read_email
+        - active_flow: draft_email
+    
+    steps:
+      - action: utter_checking_emails
+      - action: action_check_emails
+      - condition:
+          # If we found new emails
+          - slot_was_set:
+            - new_emails_count: > 0
+        - action: action_notify_new_emails
+      - condition:
+          # If we didn't find new emails
+          - slot_was_set:
+            - new_emails_count: 0
+        - action: utter_no_new_emails
+
+triggers:
+  - flow_id: check_emails_flow
+    conditions:
+      - intent: check_email

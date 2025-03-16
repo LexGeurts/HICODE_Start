@@ -1,35 +1,316 @@
 version: "3.1"
 
+intents:
+  # Basic conversation intents
+  - greet
+  - goodbye
+  - affirm
+  - deny
+  - bot_challenge
+  - help
+  
+  # Email checking/inbox intents
+  - check_email
+  - read_email
+  - open_inbox
+  - email_setup
+  
+  # Email management intents
+  - manage_inbox
+  - organize_by_folder
+  - filter_emails
+  - mark_as_read
+  - delete_emails
+  
+  # Email drafting intents
+  - draft_email
+  - edit_draft
+  - send_email
+  - save_draft
+  - discard_draft
+  
+  # Email search intents
+  - search_emails
+  - search_by_sender
+  - search_by_subject
+  - search_by_date
+  - search_by_content
+  - search_by_attachment
+  - refine_search
+  - select_email
+  - sort_results
+  
+  # Email actions intents
+  - forward_email
+  - reply_to_email
+  - delete_selected_email
+  - export_results
+  - open_email
+  
+  # Entity mention intents (add these)
+  - mention_sender
+  - mention_email_id
+
+entities:
+  - sender
+  - date
+  - subject
+  - email_id
+  - folder
+  - attachment_type
+  - search_term
+
 slots:
-  recipient:
+  # Flow control slot
+  active_flow:
     type: text
+    influence_conversation: true
     mappings:
-      - type: from_llm
-  amount:
+      - type: from_text
+  
+  # Email management slots
+  folder_categories:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  filter_criteria:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  emails_to_mark:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  emails_to_delete:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+      
+  # Email drafting slots
+  email_recipient:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  email_subject:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  email_purpose:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  email_key_points:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  email_tone:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  email_edits:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+      
+  # Email search slots
+  search_sender:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  search_subject:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  search_date:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  search_content:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  search_attachment:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  search_refinement:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  selected_email:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  sort_criteria:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  
+  # Context and email count slots
+  context:
+    type: any
+    influence_conversation: false
+    mappings:
+      - type: from_text
+  new_emails_count:
     type: float
+    influence_conversation: true
     mappings:
-      - type: from_llm
+      - type: from_text
+  has_emails:
+    type: bool
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  emails:
+    type: list
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  email_content:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
 
 responses:
-  utter_ask_recipient:
-    - text: "Who would you like to send money to?"
+  # Original responses
+  utter_greet:
+  - text: "Hey! I'm MailoBot, your email assistant. How can I help you today?"
 
-  utter_ask_amount:
-    - text: "How much money would you like to send?"
+  utter_cheer_up:
+  - text: "Here is something to cheer you up:"
+    image: "https://i.imgur.com/nGF1K8f.jpg"
 
-  utter_transfer_complete:
-    - text: "All done. {amount} has been sent to {recipient}."
+  utter_did_that_help:
+  - text: "Did that help you?"
 
-  utter_free_chitchat_response:
-    - text: "placeholder"
-      metadata:
-        rephrase: True
-        rephrase_prompt: |
-          The following is a conversation with an AI assistant built with Rasa.
-          The assistant can help the user transfer money.
-          The assistant is helpful, creative, clever, and very friendly.
-          The user is making small talk, and the assistant should respond, keeping things light.
-          Context / previous conversation with the user:
-          {{history}}
-          {{current_input}}
-          Suggested AI Response:
+  utter_happy:
+  - text: "Great, carry on!"
+
+  utter_goodbye:
+  - text: "Bye! Feel free to reach out if you need more help with your emails."
+
+  utter_iamabot:
+  - text: "I am MailoBot, your email assistant. I'm designed to help you manage your emails efficiently."
+  
+  # Main flow responses
+  utter_welcome:
+  - text: "Welcome to MailoBot! I can help you manage your emails. How can I assist you today?"
+  
+  utter_help:
+  - text: "I can help you with several email tasks, including:"
+  - text: "- Organizing your inbox into folders and categories"
+  - text: "- Drafting new emails with customizable tone and content"
+  - text: "- Searching for specific emails by sender, subject, date, or content"
+  - text: "- Managing attachments and email actions"
+  - text: "What would you like help with?"
+  
+  # Email management responses
+  utter_start_management:
+  - text: "I can help you organize your inbox. What would you like to do with your emails?"
+  
+  # Email drafting responses
+  utter_start_drafting:
+  - text: "I'll help you draft an email. Who would you like to send it to?"
+  
+  # Email search responses
+  utter_start_search:
+  - text: "I can help you search for specific emails in your inbox. What would you like to find?"
+
+  # Email checking responses
+  utter_checking_emails:
+  - text: "Checking for new emails. One moment please..."
+  
+  utter_no_new_emails:
+  - text: "I didn't find any new emails in your inbox."
+  
+  # Inbox responses
+  utter_show_inbox:
+  - text: "Here's your inbox:"
+  
+  utter_empty_inbox:
+  - text: "Your inbox is empty. No emails to display."
+  
+  utter_email_actions:
+  - text: "What would you like to do with your emails? You can ask me to read specific emails, mark them as read, or archive them."
+  
+  # Email setup responses
+  utter_email_setup_intro:
+  - text: "Let's set up your email account. I'll need your IMAP server details."
+  
+  # Additional draft email responses
+  utter_ask_subject:
+  - text: "What should be the subject of your email?"
+  
+  utter_ask_content:
+  - text: "Now, what would you like to write in the body of your email?"
+  
+  utter_draft_options:
+  - text: "Your draft is ready. Would you like to send it, edit it, or save it as a draft?"
+  
+  # Read email responses
+  utter_post_read_options:
+  - text: "What would you like to do with this email? You can reply, forward, archive, or delete it."
+
+actions:
+  - utter_greet
+  - utter_cheer_up
+  - utter_did_that_help
+  - utter_happy
+  - utter_goodbye
+  - utter_iamabot
+  - utter_help
+  - utter_welcome
+  - action_search_emails
+  - action_organize_inbox
+  - action_draft_email
+  - action_send_email
+  - action_save_draft
+  - action_activate_flow
+  - action_collect_folder_info
+  - action_collect_filter_criteria
+  - action_mark_emails_read
+  - action_confirm_delete
+  - action_collect_edits
+  - action_confirm_send
+  - action_confirm_discard
+  - action_collect_sender
+  - action_collect_subject
+  - action_collect_date
+  - action_collect_content
+  - action_collect_attachment
+  - action_calm_processor
+  - action_check_emails
+  - action_read_email
+  - action_show_inbox
+  - action_show_settings
+  - action_read_recent_email
+  - action_notify_new_emails
+  - action_fetch_emails
+  - action_display_email_list
+  - action_draft_complete
+  - action_collect_draft_info
+  - action_post_read_options
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

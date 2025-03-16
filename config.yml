@@ -1,11 +1,18 @@
 recipe: default.v1
+
+# The assistant project unique identifier
+assistant_id: mailobot_assistant
+
+# Language settings
 language: en
+
+# Pipeline configuration with CALM integration
 pipeline:
-- name: SingleStepLLMCommandGenerator
-  llm:
-    model_group: rasa_command_generation_model
-  flow_retrieval:
-    active: false
+  - name: SingleStepLLMCommandGenerator
+    llm:
+      model_group: rasa_command_generation_model
+    flow_retrieval:
+      active: false
 
 policies:
   - name: FlowPolicy

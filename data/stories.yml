@@ -1,0 +1,61 @@
+version: "3.1"
+
+stories:
+- story: happy path
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: affirm
+  - action: utter_happy
+
+- story: sad path
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: deny
+  - action: utter_goodbye
+
+- story: interactive help
+  steps:
+  - intent: help
+  - action: utter_help
+
+- story: email management flow
+  steps:
+  - intent: manage_inbox
+  - action: utter_start_management
+  - action: action_activate_flow
+
+- story: email drafting flow
+  steps:
+  - intent: draft_email
+  - action: utter_start_drafting
+  - action: action_activate_flow
+  - action: utter_ask_subject
+  - action: utter_ask_content
+  - action: utter_draft_options
+  - intent: send_email
+  - action: action_confirm_send
+  - intent: affirm
+  - action: action_send_email
+
+- story: email search flow
+  steps:
+  - intent: search_emails
+  - action: utter_start_search
+  - action: action_activate_flow
+  - intent: search_by_sender
+  - action: action_collect_sender
+
+- story: cheer up user
+  steps:
+  - intent: deny
+  - action: utter_cheer_up
+  - action: utter_did_that_help
+  - intent: affirm
+  - action: utter_happy
+
+- story: show inbox follow-up
+  steps:
+  - action: action_show_inbox
+  - action: utter_email_actions

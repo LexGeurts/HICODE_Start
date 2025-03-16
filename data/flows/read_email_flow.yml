@@ -1,0 +1,45 @@
+version: "3.1"
+
+flows:
+  - name: read_email_flow
+    priority: 1
+    conditions:
+      - active_flow: read_email
+      - or:
+        - intent: affirm
+        - intent: open_email
+        - intent: read_email
+        - entities:
+          - entity: email_id
+      - not:
+        - active_flow: draft_email
+        - active_flow: search_emails
+        - active_flow: inbox_manage
+    
+    steps:
+      - condition:
+          - entities:
+            - entity: email_id
+        # If we have a specific email_id entity, use it
+        - action: action_read_email
+      - condition:
+          # If we're responding to a notification about a specific email
+          - slot_was_set:
+            - selected_email: true
+        - action: action_read_email
+      - condition:
+          # Otherwise, use the most recent notifications
+          - intent: affirm
+        - action: action_read_recent_email
+      - action: action_post_read_options
+
+triggers:
+  - flow_id: read_email_flow
+    conditions:
+      - intent: affirm
+      - context:
+          - type: new_email_notification
+
+  - flow_id: read_email_flow
+    conditions:
+      - intent: read_email

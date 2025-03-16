@@ -1,0 +1,70 @@
+email_drafting:
+  description: This flow guides users through drafting and sending emails
+  name: email drafting
+  steps:
+    - collect: email_recipient
+      description: the recipient's email address
+    - collect: email_subject
+      description: the subject of the email
+    - collect: email_purpose
+      description: the main purpose of the email
+    - collect: email_key_points
+      description: key points to include in the email
+      ask_before_filling: true
+    - action: action_generate_draft
+    - id: review_draft
+      collect: draft_approval
+      description: whether the user approves of the draft
+      ask_before_filling: true
+      next:
+        - if: not slots.draft_approval
+          then: edit_or_discard
+        - else: send_or_save
+    
+    - id: edit_or_discard
+      collect: edit_decision
+      description: whether to edit or discard the draft
+      ask_before_filling: true
+      next:
+        - if: slots.edit_decision == "edit"
+          then:
+            - action: action_collect_edits
+            - action: action_update_draft
+            next: review_draft
+        - if: slots.edit_decision == "discard"
+          then:
+            - action: action_confirm_discard
+            next:
+              - if: slots.confirm_discard
+                then:
+                  - action: action_discard_draft
+                  - action: utter_draft_discarded
+                  next: "END"
+              - else:
+                  next: review_draft
+        - else:
+            next: review_draft
+    
+    - id: send_or_save
+      collect: send_decision
+      description: whether to send or save the draft
+      ask_before_filling: true
+      next:
+        - if: slots.send_decision == "send"
+          then:
+            - action: action_confirm_send
+            next:
+              - if: slots.confirm_send
+                then:
+                  - action: action_send_email
+                  - action: utter_email_sent
+                  next: "END"
+              - else:
+                  next: review_draft
+        - if: slots.send_decision == "save"
+          then:
+            - action: action_save_draft
+            - action: utter_draft_saved
+            next: "END"
+        - else:
+            next: review_draft

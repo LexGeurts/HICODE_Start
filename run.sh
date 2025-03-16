@@ -36,13 +36,17 @@ FLASK_PID=$!
 # Wait a moment to ensure Flask server has started
 sleep 2
 
-# Start Rasa server in background
-echo "Starting Rasa server..."
+# Start Rasa server in background with explicit CORS settings
+echo "Starting Rasa server with CORS enabled..."
 rasa run --enable-api --cors "*" &
 RASA_PID=$!
 
+# Get back to the root directory
+cd ..
+
 echo "MailoBot servers are running!"
 echo "Access the application at http://localhost:3000"
+echo "Rasa API is available at http://localhost:5005"
 echo "Press Ctrl+C to stop the servers."
 
 # Wait for user to press Ctrl+C

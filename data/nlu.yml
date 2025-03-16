@@ -1,0 +1,504 @@
+version: "3.1"
+
+nlu:
+- intent: greet
+  examples: |
+    - hello
+    - hi
+    - hey
+    - good morning
+    - good evening
+    - hey there
+    - hi there
+    - hello there
+
+- intent: goodbye
+  examples: |
+    - bye
+    - goodbye
+    - see you
+    - see you later
+    - have a nice day
+    - bye bye
+    - take care
+
+- intent: affirm
+  examples: |
+    - yes
+    - y
+    - indeed
+    - of course
+    - that sounds good
+    - correct
+    - sure
+    - ok
+    - okay
+    - alright
+    - yeah
+    - yep
+    - sounds good
+
+- intent: deny
+  examples: |
+    - no
+    - n
+    - never
+    - I don't think so
+    - don't like that
+    - no way
+    - not really
+    - nope
+    - nah
+
+- intent: check_email
+  examples: |
+    - check my emails
+    - do I have new emails
+    - check for new emails
+    - get my emails
+    - check inbox
+    - update my inbox
+    - refresh my emails
+    - look for new messages
+    - any new emails
+    - new mail
+    - check my mail
+    - update mail
+
+- intent: read_email
+  examples: |
+    - read email
+    - read the email
+    - show email
+    - read message
+    - view that message
+    - show me the message
+    - let me see that email
+    - read it
+    - open it
+    - show it
+    - read the message from [John](sender)
+    - show emails from [Mary](sender)
+    - read that email from [team@github.com](sender)
+    - open the message from [newsletter@medium.com](sender)
+    - read that for me
+    - open that
+
+- intent: open_inbox
+  examples: |
+    - open my inbox
+    - show my inbox
+    - show me my emails
+    - go to inbox
+    - show all emails
+    - all emails
+    - inbox
+    - email list
+    - show unread emails
+    - unread messages
+
+- intent: draft_email
+  examples: |
+    - write an email
+    - draft an email
+    - compose email
+    - new email
+    - create mail
+    - write a message
+    - compose a message
+    - write email to [John](sender)
+    - send mail to [team@github.com](sender)
+    - compose message for [Jane Smith](sender)
+
+- intent: email_setup
+  examples: |
+    - set up my email
+    - email setup
+    - configure my email
+    - email configuration
+    - connect my email
+    - email connection settings
+    - setup my mail account
+    - connect to my inbox
+    - email settings
+    - mail settings
+    - account setup
+    - setup imap
+    - mail setup
+
+- intent: help
+  examples: |
+    - help
+    - I need help
+    - what can you do
+    - how does this work
+    - what are my options
+    - what are your features
+    - help me
+    - show commands
+    - show me what you can do
+    - what's available
+    - instructions
+    - how to use
+
+- intent: mention_sender
+  examples: |
+    - emails from [John](sender)
+    - messages sent by [Mary](sender)
+    - anything from [Google](sender)
+    - check emails from [GitHub](sender)
+    - show me emails by [LinkedIn](sender)
+    - find emails from [Amazon](sender)
+    - look for messages from [Microsoft](sender)
+    - find all from [Jane Smith](sender)
+    - emails by [team@github.com](sender)
+    - messages from [newsletter@medium.com](sender)
+
+- intent: mention_email_id
+  examples: |
+    - email [123](email_id)
+    - message [456](email_id)
+    - open email [email-789](email_id)
+    - show me [msg_1234](email_id)
+
+- intent: bot_challenge
+  examples: |
+    - are you a bot?
+    - are you a human?
+    - am I talking to a bot?
+    - am I talking to a human?
+    - are you real?
+    - what are you?
+    - who created you?
+    - how do you work?
+    - are you an AI assistant?
+
+- intent: delete_emails
+  examples: |
+    - delete emails
+    - trash emails
+    - remove messages
+    - delete old emails
+    - get rid of these emails
+    - remove spam emails
+    - trash these messages
+    - move to trash
+    - delete all
+    - clear inbox
+    - clean up email
+
+- intent: delete_selected_email
+  examples: |
+    - delete this email
+    - trash this message
+    - delete the selected email
+    - delete the email I just read
+    - remove this email
+    - move this to trash
+    - delete message
+    - trash selected email
+    - delete email number 3
+    - remove that email from my inbox
+
+- intent: discard_draft
+  examples: |
+    - discard draft
+    - discard this draft
+    - delete draft
+    - don't save this draft
+    - cancel the email
+    - forget about this email
+    - start over
+    - throw away this draft
+    - abandon this draft
+    - don't send this email
+
+- intent: edit_draft
+  examples: |
+    - edit draft
+    - modify this draft
+    - change the draft
+    - edit this email
+    - revise draft
+    - update draft
+    - change email content
+    - revise this email
+    - edit the email I'm composing
+    - modify the draft
+
+- intent: export_results
+  examples: |
+    - export results
+    - export these emails
+    - save search results
+    - download results
+    - export found emails
+    - save these emails
+    - download emails as file
+    - export these messages
+    - save search results as file
+    - export to file
+
+- intent: filter_emails
+  examples: |
+    - filter emails
+    - filter my inbox
+    - show only unread
+    - filter by importance
+    - filter messages
+    - show only emails with attachments
+    - filter out newsletters
+    - filter inbox by sender
+    - filter to show only important emails
+    - show only starred emails
+
+- intent: forward_email
+  examples: |
+    - forward email
+    - forward this message
+    - send this to someone else
+    - forward this to [John](sender)
+    - pass this email along
+    - forward to [team@example.com](sender)
+    - I want to forward this email
+    - forward this message to a colleague
+    - share this email
+    - send along this message
+
+- intent: manage_inbox
+  examples: |
+    - manage inbox
+    - organize inbox
+    - sort my emails
+    - clean up inbox
+    - categorize emails
+    - manage my emails
+    - organize my messages
+    - help me organize
+    - manage email folders
+    - sort my inbox
+
+- intent: mark_as_read
+  examples: |
+    - mark as read
+    - mark these emails as read
+    - mark all as read
+    - mark message as read
+    - mark everything read
+    - I've read these
+    - mark them as read
+    - set these messages to read
+    - no more unread emails
+    - mark as seen
+
+- intent: open_email
+  examples: |
+    - open this email
+    - open message
+    - view email
+    - display that message
+    - open the selected email
+    - look at that email
+    - show me email details
+    - open the email I selected
+    - display email content
+    - view selected email
+
+- intent: organize_by_folder
+  examples: |
+    - organize emails by folder
+    - create folders for my emails
+    - categorize emails in folders
+    - sort emails into folders
+    - move emails to folders
+    - group emails by category
+    - organize my inbox into folders
+    - create a new folder structure
+    - set up email categorization
+    - put emails in separate folders
+
+- intent: refine_search
+  examples: |
+    - refine search
+    - narrow down results
+    - filter these search results
+    - make search more specific
+    - improve my search results
+    - add more search criteria
+    - be more specific in search
+    - refine my email search
+    - focus the search results
+    - make search more precise
+
+- intent: reply_to_email
+  examples: |
+    - reply to this email
+    - reply to the message
+    - respond to this email
+    - write a reply
+    - I want to reply
+    - respond to sender
+    - write back to this email
+    - send a reply
+    - answer this email
+    - reply to [John](sender)
+
+- intent: save_draft
+  examples: |
+    - save as draft
+    - save this draft
+    - save my email as draft
+    - don't send yet, just save
+    - store as draft
+    - save my message for later
+    - I'll finish it later
+    - keep this as a draft
+    - save without sending
+    - store this email
+
+- intent: search_by_attachment
+  examples: |
+    - find emails with attachments
+    - search for emails with PDF
+    - look for messages with images
+    - find emails with excel attachments
+    - search for files in emails
+    - find messages with documents
+    - emails containing spreadsheets
+    - search for emails with videos
+    - find presentations in my emails
+    - messages with document attachments
+
+- intent: search_by_content
+  examples: |
+    - search in email body
+    - find emails containing text
+    - search for phrase in emails
+    - find message content with
+    - search email body for
+    - look for text in email content
+    - find emails mentioning
+    - search for keywords in messages
+    - emails containing these words
+    - find emails with this text
+
+- intent: search_by_date
+  examples: |
+    - find emails from yesterday
+    - search for messages last week
+    - show emails from June
+    - messages received today
+    - find emails between dates
+    - search for emails before May
+    - emails after January 1st
+    - find messages from this month
+    - emails received in 2023
+    - search by date range
+
+- intent: search_by_sender
+  examples: |
+    - find emails from [John](sender)
+    - search for messages from [Mary](sender)
+    - emails sent by [Google](sender)
+    - show messages from [support@company.com](sender)
+    - find all emails from [newsletter](sender)
+    - who sent emails about
+    - search sender [Amazon](sender)
+    - all mail from [Microsoft](sender)
+    - emails received from [team](sender)
+    - messages by [boss](sender)
+
+- intent: search_by_subject
+  examples: |
+    - find emails with subject
+    - search for subject containing
+    - emails with title
+    - messages with subject line
+    - find subject
+    - look for emails titled
+    - search for emails about
+    - messages with heading
+    - subject search
+    - find emails subject contains
+
+- intent: search_emails
+  examples: |
+    - search emails
+    - find messages
+    - search my inbox
+    - look for emails
+    - find messages about
+    - search for email
+    - look through my emails
+    - search mail
+    - find emails in my inbox
+    - search through messages
+
+- intent: select_email
+  examples: |
+    - select email 3
+    - choose the first email
+    - select message 5
+    - pick that email
+    - open the second message
+    - select this one
+    - I want to see email number 4
+    - choose the latest email
+    - select the first result
+    - pick email from [John](sender)
+
+- intent: send_email
+  examples: |
+    - send email
+    - send the message now
+    - send this email
+    - deliver email
+    - send message now
+    - dispatch this email
+    - send it right away
+    - send now
+    - transmit this message
+    - deliver this email now
+    - send this draft
+
+- intent: sort_results
+  examples: |
+    - sort by date
+    - organize results by sender
+    - sort emails by subject
+    - arrange by importance
+    - sort chronologically
+    - sort from newest to oldest
+    - order by size
+    - sort alphabetically
+    - arrange by priority
+    - sort messages by date received
+
+# Define lookup tables for entity extraction
+# These can be used to improve entity recognition
+lookup_tables:
+  - name: sender
+    elements:
+      - John
+      - Mary
+      - Google
+      - GitHub
+      - LinkedIn
+      - Amazon
+      - Microsoft
+      - Jane Smith
+      - team@github.com
+      - newsletter@medium.com
+
+  - name: email_domain
+    elements:
+      - gmail.com
+      - outlook.com
+      - yahoo.com
+      - hotmail.com
+      - protonmail.com
+      - icloud.com
+      - microsoft.com
+      - amazon.com
+      - github.com
+      - medium.com

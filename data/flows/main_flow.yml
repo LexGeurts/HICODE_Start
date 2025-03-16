@@ -1,0 +1,76 @@
+version: "3.1"
+
+main_flow:
+  name: main_flow
+  description: Main conversation flow for MailoBot
+  steps:
+    - id: welcome
+      type: message
+      message: Welcome to MailoBot! I can help you manage your emails. How can I assist you today?
+      next: intent_router
+    
+    - id: intent_router
+      type: router
+      conditions:
+        - condition: intent == 'manage_inbox'
+          next: email_management_flow
+        - condition: intent == 'draft_email'
+          next: email_drafting_flow
+        - condition: intent == 'search_emails'
+          next: email_search_flow
+        - condition: intent == 'goodbye'
+          next: goodbye
+      default: calm_fallback
+    
+    - id: email_management_flow
+      type: flow
+      flow: email_management
+      next: intent_router
+    
+    - id: email_drafting_flow
+      type: flow
+      flow: email_drafting
+      next: intent_router
+    
+    - id: email_search_flow
+      type: flow
+      flow: email_search
+      next: intent_router
+    
+    - id: calm_fallback
+      type: calm
+      model: openai/gpt-3.5-turbo
+      system_prompt: You are MailoBot, an AI email assistant. Respond to the user's query in a helpful, concise way. Focus on email management, organization, and communication.
+      next: intent_router
+    
+    - id: goodbye
+      type: message
+      message: Thank you for using MailoBot! Is there anything else I can help you with?
+      next: "END"
+
+flows:
+  - name: welcome_flow
+    priority: 1
+    conditions:
+      - intent: greet
+    
+    steps:
+      - action: utter_greet
+      - action: utter_welcome
+
+  - name: help_flow
+    priority: 1
+    conditions:
+      - intent: help
+    
+    steps:
+      - action: utter_help
+
+triggers:
+  - flow_id: welcome_flow
+    conditions:
+      - intent: greet
+
+  - flow_id: help_flow
+    conditions:
+      - intent: help
