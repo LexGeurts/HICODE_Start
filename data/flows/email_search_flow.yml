@@ -1,0 +1,179 @@
+email_search:
+  name: email_search
+  description: Flow for searching and finding specific emails
+  steps:
+    - id: start_search
+      type: message
+      message: I can help you search for specific emails in your inbox. What would you like to find?
+      next: search_options
+    
+    - id: search_options
+      type: router
+      conditions:
+        - condition: intent == 'search_by_sender'
+          next: search_sender
+        - condition: intent == 'search_by_subject'
+          next: search_subject
+        - condition: intent == 'search_by_date'
+          next: search_date
+        - condition: intent == 'search_by_content'
+          next: search_content
+        - condition: intent == 'search_by_attachment'
+          next: search_attachment
+      default: search_calm_fallback
+    
+    - id: search_sender
+      type: slot
+      slot: search_sender
+      prompt: Which sender's emails are you looking for?
+      next: perform_search
+    
+    - id: search_subject
+      type: slot
+      slot: search_subject
+      prompt: What subject or keywords are you looking for in the email subject line?
+      next: perform_search
+    
+    - id: search_date
+      type: slot
+      slot: search_date
+      prompt: What date or date range are you looking for? (e.g., today, last week, between June 1-15, etc.)
+      next: perform_search
+    
+    - id: search_content
+      type: slot
+      slot: search_content
+      prompt: What words or phrases are you looking for in the email body?
+      next: perform_search
+    
+    - id: search_attachment
+      type: slot
+      slot: search_attachment
+      prompt: What type of attachment are you looking for? (e.g., PDF, images, spreadsheets)
+      next: perform_search
+    
+    - id: perform_search
+      type: calm
+      model: openai/gpt-3.5-turbo
+      system_prompt: You are a search assistant for email. Based on the user's search criteria, describe the search results as if you have queried their email account. Include details about what would be found, how many emails might match, and offer to refine the search if needed. This is a simulation, so create plausible but fictional email results. In a real implementation, this would connect to the user's email service and return actual results.
+      next: search_results
+    
+    - id: search_results
+      type: message
+      message: Here are the search results. Would you like to refine your search or perform any actions on these emails?
+      next: result_options
+    
+    - id: result_options
+      type: router
+      conditions:
+        - condition: intent == 'refine_search'
+          next: refine_search
+        - condition: intent == 'select_email'
+          next: select_email
+        - condition: intent == 'sort_results'
+          next: sort_results
+        - condition: intent == 'export_results'
+          next: export_results
+      default: results_calm_fallback
+    
+    - id: refine_search
+      type: slot
+      slot: search_refinement
+      prompt: How would you like to refine your search?
+      next: apply_refinement
+    
+    - id: apply_refinement
+      type: calm
+      model: openai/gpt-3.5-turbo
+      system_prompt: You are refining an email search based on user feedback: {search_refinement}. Explain how the search would be narrowed down or modified, and provide updated simulated results.
+      next: search_results
+    
+    - id: select_email
+      type: slot
+      slot: selected_email
+      prompt: Which email would you like to select from the results? Please specify by number, sender, or describe it.
+      next: email_actions
+    
+    - id: email_actions
+      type: router
+      conditions:
+        - condition: intent == 'open_email'
+          next: open_email
+        - condition: intent == 'forward_email'
+          next: forward_email
+        - condition: intent == 'reply_to_email'
+          next: reply_to_email
+        - condition: intent == 'delete_selected_email'
+          next: delete_selected_email
+      default: actions_calm_fallback
+    
+    - id: open_email
+      type: calm
+      model: openai/gpt-3.5-turbo
+      system_prompt: Simulate opening the selected email: {selected_email}. Provide a detailed view of what this email would contain, including sender, date, subject, content, and any attachments. This is a simulation for demonstration purposes.
+      next: search_complete
+    
+    - id: forward_email
+      type: message
+      message: In a real implementation, you would be prompted to enter the recipient for forwarding this email. The system would then forward the selected email to that recipient.
+      next: search_complete
+    
+    - id: reply_to_email
+      type: message
+      message: In a real implementation, this would open the email drafting flow with the recipient and subject pre-filled for a reply to the selected email.
+      next: search_complete
+    
+    - id: delete_selected_email
+      type: confirmation
+      message: Are you sure you want to delete the selected email?
+      confirmed: confirm_deletion
+      denied: cancel_deletion
+    
+    - id: confirm_deletion
+      type: message
+      message: The selected email has been moved to trash. In a real implementation, this would actually delete the email from your inbox.
+      next: search_complete
+    
+    - id: cancel_deletion
+      type: message
+      message: Email deletion canceled.
+      next: search_complete
+    
+    - id: sort_results
+      type: slot
+      slot: sort_criteria
+      prompt: How would you like to sort the results? (e.g., by date, sender, subject)
+      next: apply_sort
+    
+    - id: apply_sort
+      type: message
+      message: Results have been sorted by {sort_criteria}. In a real implementation, this would reorder the search results according to your preference.
+      next: search_results
+    
+    - id: export_results
+      type: message
+      message: Your search results have been exported. In a real implementation, this would create a file with the search results that you could download or share.
+      next: search_complete
+    
+    - id: search_calm_fallback
+      type: calm
+      model: openai/gpt-3.5-turbo
+      system_prompt: You are MailoBot, helping with email searching. The user has requested a search that doesn't match our predefined intents. Respond helpfully based on their search request and explain how you would find the emails they're looking for.
+      next: perform_search
+    
+    - id: results_calm_fallback
+      type: calm
+      model: openai/gpt-3.5-turbo
+      system_prompt: You are MailoBot, helping with search results. The user has requested an action on the search results that doesn't match our predefined intents. Respond helpfully based on their request related to the search results.
+      next: search_complete
+    
+    - id: actions_calm_fallback
+      type: calm
+      model: openai/gpt-3.5-turbo
+      system_prompt: You are MailoBot, helping with email actions. The user has requested an action on the selected email that doesn't match our predefined intents. Respond helpfully based on their request related to the selected email.
+      next: search_complete
+    
+    - id: search_complete
+      type: message
+      message: Is there anything else you'd like to search for in your emails?
+      next: "END"

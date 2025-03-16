@@ -190,7 +190,7 @@ rules:
 - rule: Handle reply to email request
   steps:
   - intent: reply_to_email
-  - action: action_draft_email
+  - action: action_reply_to_email
 
 - rule: Handle email sorting request
   steps:
@@ -238,8 +238,11 @@ rules:
   - intent: delete_selected_email
   - action: action_confirm_delete
 
-# CALM Fallback rule
+# CALM Fallback rule with rephraser
 - rule: CALM fallback
   steps:
   - intent: nlu_fallback
   - action: action_calm_processor
+  - slot_was_set:
+      - rephrased_message: (?P<rephrased_message>.+)
+  - action: action_process_rephrased

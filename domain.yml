@@ -190,6 +190,43 @@ slots:
     influence_conversation: true
     mappings:
       - type: from_text
+  rephrased_message:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+
+  # MCP-related slots
+  imap_settings:
+    type: any
+    influence_conversation: false
+    mappings:
+      - type: from_text
+  email_connected:
+    type: bool
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  mcp_context:
+    type: any
+    influence_conversation: false
+    mappings:
+      - type: from_text
+  email_limit:
+    type: float
+    influence_conversation: false
+    mappings:
+      - type: from_text
+  recent_emails:
+    type: list
+    influence_conversation: true
+    mappings:
+      - type: from_text
+  search_results:
+    type: list
+    influence_conversation: true
+    mappings:
+      - type: from_text
 
 responses:
   # Original responses
@@ -310,6 +347,11 @@ actions:
   - action_draft_complete
   - action_collect_draft_info
   - action_post_read_options
+  - action_process_rephrased
+  - action_reply_to_email
+  - action_connect_email
+  - action_get_recent_emails
+  - action_search_emails_mcp
 
 session_config:
   session_expiration_time: 60
