@@ -1,0 +1,97 @@
+version: "3.1"
+
+flows:
+  translate_flow:
+    name: translate_flow
+    description: Flow for translating email content to different languages
+    nlu_trigger:
+      - intent: translate_email
+    steps:
+      - action: utter_start_translation
+      - collect:
+          name: collect_email_id
+          slot: email_to_translate
+          prompt: utter_ask_which_email
+          validation:
+            valid:
+              - intent: inform
+              - intent: mention_email_id
+              - intent: read_email
+      - noop:
+          conditions:
+            - type: slot
+              name: email_to_translate
+              operator: eq
+              value: "latest"
+          next: translate_latest
+      - action: action_fetch_email
+      - noop:
+          conditions:
+            - type: slot
+              name: email_to_translate
+              operator: neq
+              value: "latest"
+          next: display_original
+      - action: action_read_email
+      - action: utter_show_original
+      - collect:
+          name: collect_target_language
+          slot: target_language
+          prompt: utter_ask_target_language
+          validation:
+            valid:
+              - intent: inform
+              - entity: language
+            mappings:
+              - type: from_entity
+                entity: language
+      - action: action_translate_content
+      - action: utter_show_translation
+      - collect:
+          name: collect_translation_action
+          slot: translation_action
+          prompt: utter_ask_translation_action
+          validation:
+            valid:
+              - intent: inform
+              - intent: send_email
+              - intent: save_draft
+      - noop:
+          conditions:
+            - type: slot
+              name: translation_action
+              operator: in
+              value: ["send", "forward"]
+          next: prepare_to_send_translation
+      - noop:
+          conditions:
+            - type: slot
+              name: translation_action
+              operator: in
+              value: ["save", "store"]
+          next: save_translation
+      - noop:
+          conditions:
+            - type: slot
+              name: translation_action
+              operator: in
+              value: ["translate again", "another language"]
+          next: start_translation
+      - collect:
+          name: collect_translation_recipient
+          slot: translation_recipient
+          prompt: utter_ask_translation_recipient
+          validation:
+            valid:
+              - intent: inform
+              - entity: email
+      - action: action_send_email
+      - action: action_save_draft
+      - set_slots:
+          name: reset_translation_slots
+          slot_values:
+            email_to_translate: null
+            target_language: null
+            translation_action: null
+            translation_recipient: null
+      - link: main_flow

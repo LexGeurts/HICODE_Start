@@ -1,0 +1,4 @@
+.rasa
+models/
+*.env
+.DS_Store
