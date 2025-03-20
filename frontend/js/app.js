@@ -280,20 +280,27 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show typing indicator
         showTypingIndicator();
 
-        // Send message to Rasa backend and get response
-        rasaService.sendMessage(message, conversationContext)
-            .then(response => {
+        // Send message to Python backend and get response
+        fetch('/api/send_message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message: message, context: conversationContext })
+        })
+            .then(response => response.json())
+            .then(data => {
                 const responseTimestamp = new Date();
                 hideTypingIndicator();
 
                 // Process Rasa response
-                handleRasaResponse(response, responseTimestamp);
+                handleRasaResponse(data, responseTimestamp);
             })
             .catch(error => {
                 const errorTimestamp = new Date();
                 console.error('Error getting response from Rasa:', error);
                 hideTypingIndicator();
-                addMessageToChat('bot', 'Sorry, I encountered an error. Please try again later.', errorTimestamp);
+                addMessageToChat('bot', 'Sorry, I encountered network error. Please try again later.', errorTimestamp);
             });
     }
 
@@ -304,9 +311,9 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function handleRasaResponse(response, timestamp) {
         // Process bot messages
-        if (response.messages && response.messages.length > 0) {
-            response.messages.forEach(message => {
-                if (message.type === 'text') {
+        if (response && response.length > 0) {
+            response.forEach(message => {
+                if (message.text) {
                     addMessageToChat('bot', message.text, timestamp);
 
                     // Save bot response to database
@@ -367,6 +374,117 @@ document.addEventListener('DOMContentLoaded', () => {
                 showSettingsDialog();
                 break;
 
+            case 'rephrased_input':
+                // Handle rephrased input from CALM
+                if (context && context.original_text && context.rephrased_text) {
+                    console.log(`CALM rephrased: "${context.original_text}" → "${context.rephrased_text}"`);
+
+                    // You could show a UI indication that rephrasing occurred
+                    const rephraseBadge = document.createElement('div');
+                    rephraseBadge.classList.add('rephrased-badge');
+                    rephraseBadge.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Rephrased`;
+
+                    // Find the last user message and add the badge
+                    const userMessages = document.querySelectorAll('.user-message');
+                    if (userMessages.length > 0) {
+                        const lastUserMessage = userMessages[userMessages.length - 1];
+                        lastUserMessage.appendChild(rephraseBadge);
+                    }
+
+                    // Update conversation context to include the rephrasing
+                    conversationContext.last_rephrased = {
+                        original: context.original_text,
+                        rephrased: context.rephrased_text,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+                break;
+
+            case 'show_summary':
+                if (action.summary) {
+                    const summaryContent = `
+                    <div class="email-summary">
+                        <h4>📝 Email Summary</h4>
+                        <p>${action.summary}</p>
+                        ${action.actionItems ?
+                            `<div class="action-items">
+                                <h5>Action Items:</h5>
+                                <ul>${action.actionItems.map(item => `<li>${item}</li>`).join('')}</ul>
+                            </div>` :
+                            ''}
+                    </div>`;
+                    addMessageToChat('bot', summaryContent, new Date());
+                }
+                break;
+
+            case 'show_translation':
+                if (action.translatedText) {
+                    const translationContent = `
+                    <div class="email-translation">
+                        <h4>🌐 Translation (${action.targetLanguage})</h4>
+                        <p>${action.translatedText}</p>
+                    </div>`;
+                    addMessageToChat('bot', translationContent, new Date());
+                }
+                break;
+
+            case 'show_analysis':
+                if (action.analysis) {
+                    const analysisContent = `
+                    <div class="email-analysis">
+                        <h4>🔍 Thread Analysis</h4>
+                        <p>${action.analysis}</p>
+                        <div class="thread-meta">
+                            <p><strong>Participants:</strong> ${action.participants.join(', ')}</p>
+                            <p><strong>Timespan:</strong> ${action.timeSpan}</p>
+                        </div>
+                    </div>`;
+                    addMessageToChat('bot', analysisContent, new Date());
+                }
+                break;
+
+            case 'show_smart_replies':
+                if (action.draft) {
+                    const draftContent = `
+                    <div class="email-draft">
+                        <h4>⚡ Generated Reply</h4>
+                        <div class="draft-content">${action.draft.replace(/\n/g, '<br>')}</div>
+                        
+                        ${action.quickReplies ?
+                            `<div class="quick-replies">
+                                <h5>Quick Reply Options:</h5>
+                                ${action.quickReplies.map((reply, i) =>
+                                `<button class="quick-reply-btn" data-reply="${i}">${reply}</button>`
+                            ).join('')}
+                            </div>` :
+                            ''}
+                            
+                        <div class="draft-actions">
+                            <button class="draft-action-btn" data-action="send">Send</button>
+                            <button class="draft-action-btn" data-action="edit">Edit</button>
+                            <button class="draft-action-btn" data-action="discard">Discard</button>
+                        </div>
+                    </div>`;
+                    addMessageToChat('bot', draftContent, new Date());
+
+                    // Attach event listeners to the draft action buttons
+                    document.querySelectorAll('.draft-action-btn').forEach(btn => {
+                        btn.addEventListener('click', handleDraftAction);
+                    });
+
+                    // Attach event listeners to quick reply buttons
+                    document.querySelectorAll('.quick-reply-btn').forEach(btn => {
+                        btn.addEventListener('click', handleQuickReply);
+                    });
+                }
+                break;
+            
+            // case 'handle_llm_fallback':
+            //     if (action.response) {
+            //         addMessageToChat('bot', action.response, new Date());
+            //     }
+            //     break;
+
             default:
                 console.log('Unknown action:', action.name);
         }
@@ -426,6 +544,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${email.attachments.map(a => a.name).join(', ')}
                     </div>` :
                 ''}
+            </div>
+            <div class="email-llm-actions">
+                <button class="email-action-btn" data-action="summarize">📝 Summarize</button>
+                <button class="email-action-btn" data-action="translate">🌐 Translate</button>
+                <button class="email-action-btn" data-action="analyze">🔍 Analyze Thread</button>
+                <button class="email-action-btn" data-action="smart-reply">⚡ Smart Reply</button>
             </div>
             <p class="email-actions">Would you like to reply to this email or archive it?</p>
         `;
@@ -834,7 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => {
                 console.error('Error loading inbox:', error);
                 hideTypingIndicator();
-                addMessageToChat('bot', 'Sorry, I encountered an error loading your inbox.');
+                addMessageToChat('bot', 'Sorry, I encountered network error loading your inbox.');
             });
     }
 
@@ -860,3 +984,69 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1500);
     }, 2000);
 });
+
+// Add event listener after email display to handle LLM action buttons
+document.addEventListener('click', function (e) {
+    if (e.target.matches('.email-action-btn')) {
+        const action = e.target.getAttribute('data-action');
+
+        // Show typing indicator while processing
+        showTypingIndicator();
+
+        switch (action) {
+            case 'summarize':
+                sendToRasa('summarize this email');
+                break;
+
+            case 'translate':
+                // Ask for language preference
+                hideTypingIndicator();
+                sendToRasa('translate this email to English');
+                break;
+
+            case 'analyze':
+                sendToRasa('analyze this email thread');
+                break;
+
+            case 'smart-reply':
+                sendToRasa('suggest a reply to this email');
+                break;
+        }
+    }
+});
+
+/**
+ * Handle draft action button clicks
+ */
+function handleDraftAction(e) {
+    const action = e.target.getAttribute('data-action');
+
+    switch (action) {
+        case 'send':
+            sendToRasa('send this email');
+            break;
+
+        case 'edit':
+            sendToRasa('edit this draft');
+            break;
+
+        case 'discard':
+            sendToRasa('discard this draft');
+            break;
+    }
+}
+
+/**
+ * Handle quick reply button clicks
+ */
+function handleQuickReply(e) {
+    const replyIndex = e.target.getAttribute('data-reply');
+    const quickReplyText = e.target.textContent;
+
+    // Update textarea with the quick reply
+    chatInput.value = quickReplyText;
+    autoResizeTextarea();
+
+    // Focus on textarea so user can modify if needed
+    chatInput.focus();
+}

@@ -1,0 +1,121 @@
+version: "3.1"
+
+flows:
+  draft_flow:
+    name: draft_flow
+    description: Flow for drafting and sending emails
+    nlu_trigger:
+      - intent: draft_email
+      - intent: reply_to_email
+    steps:
+      - action: utter_start_drafting
+      - collect:
+          name: collect_recipient
+          slot: email_recipient
+          prompt: utter_ask_recipient
+          validation:
+            valid:
+              - intent: inform
+              - entity: email
+      - collect:
+          name: collect_subject
+          slot: email_subject
+          prompt: utter_ask_subject
+      - collect:
+          name: collect_content_purpose
+          slot: email_purpose
+          prompt: utter_ask_purpose
+      - collect:
+          name: collect_tone
+          slot: email_tone
+          prompt: utter_ask_tone
+          validation:
+            valid:
+              - intent: inform
+            mappings:
+              - type: from_entity
+                entity: tone
+      - action: action_draft_email
+      - action: utter_show_draft
+      - collect:
+          name: collect_draft_approval
+          slot: draft_approved
+          prompt: utter_ask_draft_approval
+          validation:
+            valid:
+              - intent: affirm
+              - intent: deny
+      - noop: true
+        next:
+          - if: slots.draft_approved == true
+            then:
+              - id: prepare_to_send
+          - if: intent == "edit_draft"
+            then:
+              - id: revise_draft_content
+          - if: intent == "discard_draft"
+            then:
+              - id: discard_current_draft
+      - collect:
+          name: collect_draft_changes
+          slot: draft_changes
+          prompt: utter_ask_draft_changes
+      - noop: true
+        next:
+          - if: slots.draft_approved == false
+            then:
+              - id: update_draft
+      - id: revise_draft_content
+        action: action_collect_edits
+      - id: update_draft
+        action: action_revise_draft
+      - collect:
+          name: collect_final_approval
+          slot: draft_approved
+          prompt: utter_ask_final_approval
+          validation:
+            valid:
+              - intent: affirm
+              - intent: deny
+      - noop: true
+        next:
+          - if: intent == "save_draft"
+            then:
+              - id: save_current_draft
+      - collect:
+          name: collect_send_confirmation
+          slot: send_confirmation
+          prompt: utter_ask_send_confirmation
+          validation:
+            valid:
+              - intent: affirm
+              - intent: deny
+              - intent: send_email
+      - noop: true
+        next:
+          - if: intent == "send_email"
+            then:
+              - id: prepare_to_send
+          - if: intent == "deny"
+            then:
+              - id: discard_current_draft
+          - if: intent == "affirm"
+            then:
+              - id: confirm_send
+      - id: confirm_send
+        action: action_confirm_send
+      - id: prepare_to_send
+        action: action_send_email
+      - id: save_current_draft
+        action: action_save_draft
+      - id: discard_current_draft
+        action: action_confirm_discard
+      - set_slots:
+          - email_recipient: null
+          - email_subject: null
+          - email_purpose: null
+          - email_tone: null
+          - draft_approved: null
+          - draft_changes: null
+          - send_confirmation: null
+      - link: main_flow

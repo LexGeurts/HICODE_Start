@@ -44,12 +44,29 @@ action_endpoint:
 # Allow rephrasing of responses using a Rasa-hosted model
 nlg:
   type: rephrase
+  # rephrase_all: true
   llm:
-    model_group: rasa_command_generation_model
+    model_group: openai-direct-gpt-4
 
 model_groups:
-  - id: rasa_command_generation_model
+  - id: openai-direct-gpt-4
     models:
-      - provider: rasa
-        model: rasa/cmd_gen_codellama_13b_calm_demo
-        api_base: "https://tutorial-llm.rasa.ai"
+      - provider: openai
+        model: gpt-4.5-preview
+        api_key: ${OPENAI_API_KEY}
+        # api_base: "https://tutorial-llm.rasa.ai"
+
+# Added CORS configuration to allow all origins
+cors:
+  origins:
+    - "*"
+  methods:
+    - GET
+    - POST
+    - PUT
+    - OPTIONS
+  headers:
+    - Content-Type
+    - Authorization
+
+    

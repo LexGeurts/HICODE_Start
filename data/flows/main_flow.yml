@@ -1,76 +1,92 @@
 version: "3.1"
 
-main_flow:
-  name: main_flow
-  description: Main conversation flow for MailoBot
-  steps:
-    - id: welcome
-      type: message
-      message: Welcome to MailoBot! I can help you manage your emails. How can I assist you today?
-      next: intent_router
-    
-    - id: intent_router
-      type: router
-      conditions:
-        - condition: intent == 'manage_inbox'
-          next: email_management_flow
-        - condition: intent == 'draft_email'
-          next: email_drafting_flow
-        - condition: intent == 'search_emails'
-          next: email_search_flow
-        - condition: intent == 'goodbye'
-          next: goodbye
-      default: calm_fallback
-    
-    - id: email_management_flow
-      type: flow
-      flow: email_management
-      next: intent_router
-    
-    - id: email_drafting_flow
-      type: flow
-      flow: email_drafting
-      next: intent_router
-    
-    - id: email_search_flow
-      type: flow
-      flow: email_search
-      next: intent_router
-    
-    - id: calm_fallback
-      type: calm
-      model: openai/gpt-3.5-turbo
-      system_prompt: You are MailoBot, an AI email assistant. Respond to the user's query in a helpful, concise way. Focus on email management, organization, and communication.
-      next: intent_router
-    
-    - id: goodbye
-      type: message
-      message: Thank you for using MailoBot! Is there anything else I can help you with?
-      next: "END"
-
+# Main CALM Flow Definition
 flows:
-  - name: welcome_flow
-    priority: 1
-    conditions:
+  main_flow:
+    name: main_flow
+    description: Main welcome conversation flow for MailoBot email assistant
+    nlu_trigger:
       - intent: greet
-    
+      - intent: help
+      - intent: bot_challenge
+      - intent: restart
     steps:
-      - action: utter_greet
+      - action: utter_iamabot
       - action: utter_welcome
-
-  - name: help_flow
-    priority: 1
-    conditions:
-      - intent: help
-    
-    steps:
       - action: utter_help
+      - collect:
+          name: collect_email_task
+          slot: email_task
+          prompt: utter_ask_task
+          validation:
+            valid:
+              - intent: inform
+              - intent: check_email
+              - intent: read_email
+              - intent: search_emails
+              - intent: draft_email
+              - intent: translate_email
+      - noop:
+          conditions:
+            - type: slot
+              name: email_task
+              operator: in
+              value: ["check", "read", "search", "find"]
+          next: link_to_email_flow
+      - noop:
+          conditions:
+            - type: slot
+              name: email_task
+              operator: in
+              value: ["draft", "compose", "write"]
+          next: link_to_draft_flow
+      - noop:
+          conditions:
+            - type: slot
+              name: email_task
+              operator: in
+              value: ["translate", "language change"]
+          next: link_to_translate_flow
+      - set_slots:
+          name: reset_slots
+          slot_values:
+            email_task: null
+      - link: email_flow
+      - link: draft_flow
+      - link: translate_flow
 
-triggers:
-  - flow_id: welcome_flow
-    conditions:
-      - intent: greet
-
-  - flow_id: help_flow
-    conditions:
-      - intent: help
+  chitchat_flow:
+    name: chitchat_flow
+    description: Handle small talk and chitchat
+    nlu_trigger:
+      - intent: bot_challenge
+      - intent: mood_great
+      - intent: mood_unhappy
+      - intent: goodbye
+    steps:
+      - noop:
+          conditions:
+            - type: intent
+              intent: bot_challenge
+          next: respond_to_bot_challenge
+      - noop:
+          conditions:
+            - type: intent
+              intent: mood_great
+          next: respond_to_mood_great
+      - noop:
+          conditions:
+            - type: intent
+              intent: mood_unhappy
+          next: respond_to_mood_unhappy
+      - noop:
+          conditions:
+            - type: intent
+              intent: goodbye
+          next: say_goodbye
+      - action: utter_iamabot
+      - action: utter_happy
+      - action: utter_cheer_up
+      - action: utter_did_that_help
+      - action: utter_goodbye
+      - link: main_flow

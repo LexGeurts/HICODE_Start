@@ -16,33 +16,30 @@ if ! command -v python &> /dev/null; then
     exit 1
 fi
 
-# Check if Rasa is installed
-if ! command -v rasa &> /dev/null; then
-    echo "Rasa is not installed. Please install Rasa."
-    exit 1
-fi
-
 # Activate virtual environment if it exists
 if [ -d ".venv" ]; then
     echo "Activating virtual environment..."
     source .venv/bin/activate
 fi
 
-# Start Flask server in background
-echo "Starting Flask server..."
-python app.py &
-FLASK_PID=$!
-
-# Wait a moment to ensure Flask server has started
-sleep 2
+# Check if Rasa is installed
+if ! command -v rasa &> /dev/null; then
+    echo "Rasa is not installed. Please install Rasa."
+    exit 1
+fi
 
 # Start Rasa server in background with explicit CORS settings
 echo "Starting Rasa server with CORS enabled..."
 rasa run --enable-api --cors "*" &
 RASA_PID=$!
 
-# Get back to the root directory
-cd ..
+# Wait a moment to ensure Rasa server has started
+sleep 10
+
+# Start Flask server in background
+echo "Starting Flask server..."
+flask run &
+FLASK_PID=$!
 
 echo "MailoBot servers are running!"
 echo "Access the application at http://localhost:3000"

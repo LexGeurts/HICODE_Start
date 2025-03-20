@@ -1,8 +1,23 @@
+import json
 import os
-from flask import Flask, send_from_directory
+import requests
+import logging
+from flask import Flask, send_from_directory, request, jsonify
+from flask_cors import CORS
+from requests.exceptions import RequestException, Timeout, ConnectionError
+
+# Setup logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='frontend')
+
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Default Rasa server URL
+DEFAULT_RASA_URL = 'http://localhost:5005/webhooks/rest/webhook'
 
 # Serve frontend files
 
@@ -14,10 +29,169 @@ def serve_static(path):
         return send_from_directory(app.static_folder, path)
     return send_from_directory(app.static_folder, 'index.html')
 
+# Endpoint to check if Rasa server is available
+
+
+@app.route('/api/check_rasa', methods=['GET'])
+def check_rasa():
+    rasa_url = os.environ.get('RASA_URL', 'http://localhost:5005')
+    try:
+        # Try to connect to the server's health endpoint
+        response = requests.get(f"{rasa_url}/version", timeout=3)
+        if response.ok:
+            return jsonify({"status": "available", "version": response.json()})
+        else:
+            return jsonify({"status": "unavailable", "reason": "API responded with error"}), 503
+    except RequestException as e:
+        logger.error(f"Failed to connect to Rasa server: {str(e)}")
+        return jsonify({"status": "unavailable", "reason": str(e)}), 503
+
+# Endpoint to send message to Rasa and get response
+
+
+@app.route('/api/send_message', methods=['POST'])
+def send_message():
+    data = request.json
+    message = data.get('message')
+    context = data.get('context', {})
+
+    rasa_url = os.environ.get('RASA_URL', DEFAULT_RASA_URL)
+    payload = {
+        "sender": "user",
+        "message": message,
+        "metadata": context
+    }
+
+    try:
+        # Set shorter timeout to prevent long waits on failures
+        response = requests.post(rasa_url, json=payload, timeout=10)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except Timeout:
+        error_message = "Request to Rasa server timed out. Please check if the server is running and responsive."
+        logger.error(error_message)
+        return jsonify({
+            "error": error_message,
+            "fallback_response": [{"text": "I'm sorry, I couldn't process your request in time. Please try again later."}]
+        }), 504
+    except ConnectionError:
+        error_message = "Could not connect to Rasa server. Please check if the server is running."
+        logger.error(error_message)
+        return jsonify({
+            "error": error_message,
+            "fallback_response": [{"text": "I'm having trouble connecting to my backend services. Please ensure the Rasa server is running."}]
+        }), 503
+    except RequestException as e:
+        error_message = f"Error communicating with Rasa server: {str(e)}"
+        logger.error(error_message)
+        return jsonify({
+            "error": error_message,
+            "fallback_response": [{"text": "I'm sorry, I encountered an error processing your request. Please try again later."}]
+        }), 500
+
+# New endpoint to handle Rasa messages
+
+
+@app.route('/api/rasa_message', methods=['POST'])
+def rasa_message():
+    data = request.json
+    message = data.get('message')
+    context = data.get('context', {})
+
+    rasa_url = os.environ.get('RASA_URL', DEFAULT_RASA_URL)
+    payload = {
+        "sender": "user",
+        "message": message,
+        "metadata": context
+    }
+
+    try:
+        # Set shorter timeout to prevent long waits on failures
+        response = requests.post(rasa_url, json=payload, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return jsonify(process_rasa_response(data, context))
+    except Timeout:
+        error_message = "Request to Rasa server timed out. Please check if the server is running and responsive."
+        logger.error(error_message)
+        return jsonify({
+            "error": error_message,
+            "context": context,
+            "messages": [{"text": "I'm sorry, I couldn't process your request in time. Please try again later."}]
+        }), 504
+    except ConnectionError:
+        error_message = "Could not connect to Rasa server. Please check if the server is running."
+        logger.error(error_message)
+        return jsonify({
+            "error": error_message,
+            "context": context,
+            "messages": [{"text": "I'm having trouble connecting to my backend services. Please ensure the Rasa server is running."}]
+        }), 503
+    except RequestException as e:
+        error_message = f"Error communicating with Rasa server: {str(e)}"
+        logger.error(error_message)
+        return jsonify({
+            "error": error_message,
+            "context": context,
+            "messages": [{"text": "I'm sorry, I encountered an error processing your request. Please try again later."}]
+        }), 500
+
+
+def process_rasa_response(response, original_context):
+    result = {
+        "messages": [],
+        "context": {**original_context},
+        "actions": []
+    }
+
+    if not response or len(response) == 0:
+        result["messages"].append(
+            {"text": "I didn't receive a proper response. Please try again."})
+        return result
+
+    for item in response:
+        if item.get("text"):
+            result["messages"].append({"text": item["text"]})
+
+        if item.get("custom"):
+            custom_data = item["custom"]
+            if isinstance(custom_data, str):
+                try:
+                    custom_data = json.loads(custom_data)
+                except json.JSONDecodeError:
+                    logger.warning(
+                        f"Failed to decode custom JSON: {custom_data}")
+                    continue
+
+            if custom_data.get("action"):
+                result["actions"].append(custom_data["action"])
+                event = {
+                    "action": custom_data["action"],
+                    "context": custom_data.get("context", {})
+                }
+                # Emit a custom event for action handlers
+                # This would be handled on the frontend
+                # window.dispatchEvent(new CustomEvent('rasa-custom-action', { detail: event }))
+
+            if custom_data.get("context"):
+                result["context"].update(custom_data["context"])
+
+        if item.get("image"):
+            result["messages"].append({"type": "image", "url": item["image"]})
+
+        if item.get("buttons"):
+            last_message = result["messages"][-1] if result["messages"] else {
+                "text": ""}
+            last_message["buttons"] = item["buttons"]
+            if not result["messages"] or result["messages"][-1] != last_message:
+                result["messages"].append(last_message)
+
+    return result
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
-    print(f"MailoBot server running on http://localhost:{port}")
-    print("To use with Rasa, make sure to start the Rasa server with:")
-    print("  - rasa run --enable-api --cors \"*\"")
+    logger.info(f"MailoBot server running on http://localhost:{port}")
+    logger.info("To use with Rasa, make sure to start the Rasa server with:")
+    logger.info("  - rasa run --enable-api --cors \"*\"")
     app.run(debug=True, port=port)

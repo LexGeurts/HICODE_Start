@@ -1,24 +1,22 @@
 version: "3.1"
 
+#########################################################
+# Define intents                                        
+#########################################################
 intents:
   # Basic conversation intents
   - greet
   - goodbye
   - affirm
   - deny
-  - bot_challenge
   - help
   
   # Email checking/inbox intents
-  - check_email
   - read_email
-  - open_inbox
-  - email_setup
+  - setup_email
+  - check_email
   
   # Email management intents
-  - manage_inbox
-  - organize_by_folder
-  - filter_emails
   - mark_as_read
   - delete_emails
   
@@ -35,21 +33,26 @@ intents:
   - search_by_subject
   - search_by_date
   - search_by_content
-  - search_by_attachment
-  - refine_search
   - select_email
-  - sort_results
   
   # Email actions intents
   - forward_email
   - reply_to_email
-  - delete_selected_email
-  - export_results
   - open_email
   
   # Entity mention intents (add these)
   - mention_sender
   - mention_email_id
+
+  # Add new LLM feature intents
+  - summarize_email
+  - translate_email
+  - analyze_thread
+
+  # Existing intents
+  - mood_great
+  - mood_unhappy
+  - test_email_connection
 
 entities:
   - sender
@@ -59,175 +62,27 @@ entities:
   - folder
   - attachment_type
   - search_term
+  - language  # entity for translations
+  - email_number
+
+#########################################################
+# Define forms and slots here                            
+#########################################################
+forms:
+  email_form:
+    required_slots:
+      - email_filter
 
 slots:
-  # Flow control slot
-  active_flow:
+  email_filter:
     type: text
-    influence_conversation: true
     mappings:
-      - type: from_text
-  
-  # Email management slots
-  folder_categories:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  filter_criteria:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  emails_to_mark:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  emails_to_delete:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  # Email drafting slots
-  email_recipient:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  email_subject:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  email_purpose:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  email_key_points:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  email_tone:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  email_edits:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  # Email search slots
-  search_sender:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  search_subject:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  search_date:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  search_content:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  search_attachment:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  search_refinement:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  selected_email:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  sort_criteria:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  
-  # Context and email count slots
-  context:
-    type: any
-    influence_conversation: false
-    mappings:
-      - type: from_text
-  new_emails_count:
-    type: float
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  has_emails:
-    type: bool
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  emails:
-    type: list
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  email_content:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  rephrased_message:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
+      - type: from_entity
+        entity: email_filter
 
-  # MCP-related slots
-  imap_settings:
-    type: any
-    influence_conversation: false
-    mappings:
-      - type: from_text
-  email_connected:
-    type: bool
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  mcp_context:
-    type: any
-    influence_conversation: false
-    mappings:
-      - type: from_text
-  email_limit:
-    type: float
-    influence_conversation: false
-    mappings:
-      - type: from_text
-  recent_emails:
-    type: list
-    influence_conversation: true
-    mappings:
-      - type: from_text
-  search_results:
-    type: list
-    influence_conversation: true
-    mappings:
-      - type: from_text
-
+#########################################################
+# Define responses                           
+#########################################################
 responses:
   # Original responses
   utter_greet:
@@ -274,7 +129,7 @@ responses:
   - text: "I can help you search for specific emails in your inbox. What would you like to find?"
 
   # Email checking responses
-  utter_checking_emails:
+  utter_checking_email:
   - text: "Checking for new emails. One moment please..."
   
   utter_no_new_emails:
@@ -290,10 +145,6 @@ responses:
   utter_email_actions:
   - text: "What would you like to do with your emails? You can ask me to read specific emails, mark them as read, or archive them."
   
-  # Email setup responses
-  utter_email_setup_intro:
-  - text: "Let's set up your email account. I'll need your IMAP server details."
-  
   # Additional draft email responses
   utter_ask_subject:
   - text: "What should be the subject of your email?"
@@ -308,50 +159,105 @@ responses:
   utter_post_read_options:
   - text: "What would you like to do with this email? You can reply, forward, archive, or delete it."
 
+  # Add new responses for LLM features
+  utter_ask_language:
+  - text: "Which language would you like me to translate this email to?"
+
+  utter_ask_tone:
+  - text: "What tone would you like for your email? (professional, friendly, formal)"
+
+  # Additional responses
+  utter_read_email:
+    - text: "I will help you get and read your email"
+
+  utter_setup_email:
+    - text: "To set up your email, go to the settings panel and enter your IMAP server details. You'll need your email server, username, password, and port. Let me know when you're ready to test the connection."
+
+  utter_no_emails_found:
+    - text: "I couldn't find any emails in your inbox."
+
+  utter_email_connection_failed:
+    - text: "I couldn't connect to your email server. Please check your settings and try again."
+
+  utter_email_deleted:
+    - text: "The email has been deleted."
+
+  utter_email_archived:
+    - text: "The email has been archived."
+
+  utter_email_marked_read:
+    - text: "The email has been marked as read."
+
+  utter_email_marked_unread:
+    - text: "The email has been marked as unread."
+
+  utter_analyze_thread:
+  - text: "I'm analyzing this email thread to give you context and key points. One moment..."
+
+  utter_delete_emails:
+  - text: "I'll help you delete multiple emails. Please confirm which emails you want to delete."
+
+  utter_discard_draft:
+  - text: "Your draft has been discarded. Is there anything else you'd like to do?"
+
+  utter_draft_email:
+  - text: "I'll help you draft a new email. Who would you like to send it to?"
+
+  utter_edit_draft:
+  - text: "I've opened your draft for editing. What changes would you like to make?"
+
+  utter_forward_email:
+  - text: "I'll help you forward this email. Who would you like to forward it to?"
+
+  utter_mention_email_id:
+  - text: "I'll look for the email with that ID. One moment please..."
+
+  utter_mention_sender:
+  - text: "I'll find emails from that sender. Let me search your inbox..."
+
+  utter_mood_great:
+  - text: "I'm glad to hear you're doing well! How can I help with your emails today?"
+
+  utter_reply_to_email:
+  - text: "I'll help you draft a reply to this email. What would you like to say?"
+
+  utter_save_draft:
+  - text: "Your email has been saved as a draft. You can access it later from your drafts folder."
+
+  utter_search_by_content:
+  - text: "I'll search for emails containing that text in the body. Let me look through your inbox..."
+
+  utter_search_by_date:
+  - text: "I'll find emails from that date or time period. Searching your inbox now..."
+
+  utter_search_by_sender:
+  - text: "I'll search for emails from that sender. Looking through your inbox now..."
+
+  utter_search_by_subject:
+  - text: "I'll find emails with that subject line. Searching your inbox..."
+
+  utter_select_email:
+  - text: "I've selected that email for you. What would you like to do with it?"
+
+  utter_send_email:
+  - text: "Your email has been sent successfully."
+
+  utter_summarize_email:
+  - text: "Here's a summary of the key points from this email:"
+
+  utter_translate_email:
+  - text: "I'll translate this email. One moment while I process the content..."
+
+  utter_open_email:
+  - text: "Opening the selected email for you now."
+  - text: "Here's the email content you requested."
+
+#########################################################
+# Define actions                          
+#########################################################
 actions:
-  - utter_greet
-  - utter_cheer_up
-  - utter_did_that_help
-  - utter_happy
-  - utter_goodbye
-  - utter_iamabot
-  - utter_help
-  - utter_welcome
-  - action_search_emails
-  - action_organize_inbox
-  - action_draft_email
-  - action_send_email
-  - action_save_draft
-  - action_activate_flow
-  - action_collect_folder_info
-  - action_collect_filter_criteria
-  - action_mark_emails_read
-  - action_confirm_delete
-  - action_collect_edits
-  - action_confirm_send
-  - action_confirm_discard
-  - action_collect_sender
-  - action_collect_subject
-  - action_collect_date
-  - action_collect_content
-  - action_collect_attachment
-  - action_calm_processor
-  - action_check_emails
-  - action_read_email
-  - action_show_inbox
-  - action_show_settings
-  - action_read_recent_email
-  - action_notify_new_emails
-  - action_fetch_emails
-  - action_display_email_list
-  - action_draft_complete
-  - action_collect_draft_info
-  - action_post_read_options
-  - action_process_rephrased
-  - action_reply_to_email
-  - action_connect_email
-  - action_get_recent_emails
-  - action_search_emails_mcp
+  - action_check_email
+  - action_test_email_connection
 
 session_config:
   session_expiration_time: 60
