@@ -43,3 +43,4 @@ MANIFEST
 
 *.imap_settings.json
 .imap_settings.json
+settings/imap_settings.json
