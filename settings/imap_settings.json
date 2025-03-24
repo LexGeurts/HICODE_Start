@@ -1,7 +1,7 @@
 {
     "host": "imap.mail.yahoo.com",
     "port": 993,
-    "username": "iyinusa@yahoo.co.uk",
-    "password": "wzpvgltgrovnssfo",
+    "username": "your_email",
+    "password": "your_password",
     "tls": true
 }
