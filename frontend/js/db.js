@@ -45,7 +45,7 @@
     }
 
     /**
-     * Save IMAP settings to the database
+     * Save IMAP settings to the database and to a JSON file on the server
      * @param {Object} settings - IMAP settings
      * @returns {Promise} - Promise that resolves when settings are saved
      */
@@ -54,9 +54,43 @@
             // Always use id=1 for the single settings record
             settings.id = 1;
             await db.imapSettings.put(settings);
-            console.log('IMAP settings saved');
+            
+            // Also save settings to a server-side JSON file
+            await saveImapSettingsToServer(settings);
+            
+            console.log('IMAP settings saved to database and server');
         } catch (error) {
             console.error('Error saving IMAP settings:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Save IMAP settings to a server-side JSON file
+     * @param {Object} settings - IMAP settings
+     * @returns {Promise} - Promise that resolves when settings are saved to the server
+     */
+    async function saveImapSettingsToServer(settings) {
+        try {
+            // Remove the id field as it's not needed in the JSON file
+            const settingsToSave = { ...settings };
+            delete settingsToSave.id;
+            
+            const response = await fetch('/api/save_imap_settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(settingsToSave)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Error saving IMAP settings to server:', error);
             throw error;
         }
     }
