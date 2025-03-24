@@ -1,3 +1,6 @@
+import json
+import os
+
 from typing import Any, Text, Dict, List
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
@@ -7,6 +10,19 @@ from rasa_sdk.events import SlotSet
 from utils.email_mcp import EmailMCP
 
 
+def load_imap_settings():
+    """Load IMAP settings from JSON file"""
+    try:
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        settings_file = os.path.join(current_dir, 'settings', 'imap_settings.json')
+        
+        if os.path.exists(settings_file):
+            with open(settings_file, 'r') as f:
+                return json.load(f)
+        return None
+    except Exception as e:
+        print(f"Error loading IMAP settings: {e}")
+        return None
 class ActionCheckEmail(Action):
     def name(self) -> Text:
         return "action_check_emails"
@@ -14,8 +30,9 @@ class ActionCheckEmail(Action):
     def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        # Get IMAP settings from context
-        imap_settings = tracker.get_slot("imap_settings")
+        # imap_settings = tracker.get_slot("imap_settings")
+        """Get an initialized email client with settings from the JSON file"""
+        imap_settings = load_imap_settings()
         options = tracker.get_latest_message().get("metadata", {}).get("options", {})
         email_limit = tracker.get_latest_message().get(
             "metadata", {}).get("email_limit", 5)
