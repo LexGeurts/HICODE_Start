@@ -197,6 +197,23 @@ def process_rasa_response(response, original_context):
 
     return result
 
+@app.route('/api/save_imap_settings', methods=['POST'])
+def save_imap_settings():
+    try:
+        settings = request.json
+        
+        # Ensure the settings directory exists
+        settings_dir = os.path.join(app.root_path, 'settings')
+        os.makedirs(settings_dir, exist_ok=True)
+        
+        # Save settings to JSON file
+        settings_file = os.path.join(settings_dir, 'imap_settings.json')
+        with open(settings_file, 'w') as f:
+            json.dump(settings, f, indent=4)
+        
+        return jsonify({"success": True, "message": "IMAP settings saved successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
