@@ -1,6 +1,10 @@
 .DS_Store
 .idea/
+
+# Settings directory - ignore completely
 settings/
+/settings/
+**/settings/
 
 # Rasa
 .rasa/
