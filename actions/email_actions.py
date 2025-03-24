@@ -9,7 +9,7 @@ from utils.email_mcp import EmailMCP
 
 class ActionCheckEmail(Action):
     def name(self) -> Text:
-        return "action_check_email"
+        return "action_check_emails"
 
     def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
@@ -85,8 +85,26 @@ class ActionCheckEmail(Action):
             context["error"] = str(e)
             response = f"Sorry, I encountered an error checking your emails: {str(e)}"
 
-        # Send response
+        # Send response with both text and custom message format
         dispatcher.utter_message(text=response)
+        
+        # Add a custom message with the action and context information
+        # This is what the frontend looks for in handleRasaAction
+        action_data = {
+            "name": "check_email",
+        }
+        
+        # Only add these fields if they were successfully retrieved
+        if context.get("connected", False):
+            action_data["unread_count"] = context.get("unread_count", 0)
+            action_data["emails"] = context.get("emails", [])
+            
+        dispatcher.utter_message(
+            json_message={
+                "action": action_data,
+                "context": context
+            }
+        )
 
         # Update slots
         return [
@@ -151,8 +169,20 @@ class ActionTestEmailConnection(Action):
             context = {"connected": False, "error": str(e)}
             response = f"Error testing email connection: {str(e)}"
 
-        # Send response
+        # Send response with both text and custom message format
         dispatcher.utter_message(text=response)
+        
+        # Add a custom message for the frontend
+        dispatcher.utter_message(
+            json_message={
+                "action": {
+                    "name": "test_connection",
+                    "success": connected,
+                    "error": context.get("error", None)
+                },
+                "context": context
+            }
+        )
 
         # Update slots
         return [

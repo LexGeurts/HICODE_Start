@@ -2,101 +2,25 @@ version: "3.1"
 
 flows:
   email_flow:
-    name: email_flow
-    description: Flow for checking, reading and searching emails
+    description: Flow for read and managing emails.
     nlu_trigger:
       - intent: check_email
-      - intent: read_email
-      - intent: search_emails
-      - intent: manage_inbox
     steps:
-      - action: utter_start_management
-      - collect:
-          name: collect_email_action
-          slot: email_action
-          prompt: utter_ask_email_action
-          validation:
-            valid:
-              - intent: inform
-              - intent: check_email
-              - intent: read_email
-              - intent: search_emails
-      - noop:
-          conditions:
-            - type: slot
-              name: email_action
-              operator: in
-              value: ["check", "inbox"]
-          next: check_inbox
-      - noop:
-          conditions:
-            - type: slot
-              name: email_action
-              operator: in
-              value: ["read", "open"]
-          next: read_specific_email
-      - noop:
-          conditions:
-            - type: slot
-              name: email_action
-              operator: in
-              value: ["search", "find"]
-          next: search_emails
-      - action: action_check_emails
-      - action: utter_checking_emails
-      - collect:
-          name: collect_read_option
-          slot: read_option
-          prompt: utter_ask_read_option
-      - action: action_read_email
-      - collect:
-          name: collect_search_criteria
-          slot: search_criteria
-          prompt: utter_ask_search_criteria
-          validation:
-            valid:
-              - intent: search_by_sender
-              - intent: search_by_subject
-              - intent: search_by_date
-              - intent: search_by_content
-      - collect:
-          name: collect_search_term
-          slot: search_term
-          prompt: utter_ask_search_term
-      - action: action_search_emails
-      - collect:
-          name: collect_further_action
-          slot: further_email_action
-          prompt: utter_ask_further_action
-          validation:
-            valid:
-              - intent: affirm
-              - intent: deny
-      - noop:
-          conditions:
-            - type: slot
-              name: further_email_action
-              operator: eq
-              value: true
-          next: start_email_management
-      - noop:
-          conditions:
-            - type: intent
-              intent: reply_to_email
-          next: draft_reply
-      - noop:
-          conditions:
-            - type: intent
-              intent: forward_email
-          next: forward_selected_email
-      - set_slots:
-          name: reset_email_slots
-          slot_values:
-            email_action: null
-            read_option: null
-            search_criteria: null
-            search_term: null
-            further_email_action: null
-      - link: draft_flow
-      - action: action_collect_sender
-      - link: main_flow
+      - collect: email_task
+        description: Ask user what they want to do with their emails.
+        next:
+          - if: slots.email_task contains "check my emails"
+            then:
+              - action: utter_check_email
+              - action: action_check_emails
+                next: 
+                  - if: slots.has_emails
+                    then:
+                      - action: utter_emails_found
+                        next: END
+                  - else:
+                    - action: utter_no_emails_found
+                      next: END
+          - else:
+              - action: utter_reply_to_email
+                next: END

@@ -11,8 +11,6 @@ from typing import Dict, List, Any, Optional, Text
 
 # Increase the default timeout for IMAP connections
 imaplib._MAXLINE = 1000000
-
-
 class EmailMCP:
     """
     A Model Context Protocol implementation for email connectivity

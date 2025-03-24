@@ -152,7 +152,23 @@ def process_rasa_response(response, original_context):
     for item in response:
         if item.get("text"):
             result["messages"].append({"text": item["text"]})
+            
+        # Check for json_message format which is used by newer Rasa SDK
+        if item.get("json_message"):
+            json_data = item["json_message"]
+            
+            # Extract action information
+            if json_data.get("action"):
+                result["actions"].append(json_data["action"])
+            
+            # Update context with any new information
+            if json_data.get("context"):
+                result["context"].update(json_data["context"])
+                
+            # Continue processing other parts of the message
+            continue
 
+        # Handle legacy custom format
         if item.get("custom"):
             custom_data = item["custom"]
             if isinstance(custom_data, str):
@@ -165,14 +181,7 @@ def process_rasa_response(response, original_context):
 
             if custom_data.get("action"):
                 result["actions"].append(custom_data["action"])
-                event = {
-                    "action": custom_data["action"],
-                    "context": custom_data.get("context", {})
-                }
-                # Emit a custom event for action handlers
-                # This would be handled on the frontend
-                # window.dispatchEvent(new CustomEvent('rasa-custom-action', { detail: event }))
-
+                
             if custom_data.get("context"):
                 result["context"].update(custom_data["context"])
 

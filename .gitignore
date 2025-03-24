@@ -40,3 +40,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+*.imap_settings.json
+.imap_settings.json
