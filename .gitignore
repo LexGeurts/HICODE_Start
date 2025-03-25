@@ -1,4 +1,50 @@
-.rasa
-models/
-*.env
 .DS_Store
+.idea/
+
+# Settings directory - ignore completely
+settings/
+/settings/
+**/settings/
+
+# Rasa
+.rasa/
+models/
+.config/
+.keras/
+prompts/
+tests/
+qdrant_storage/
+
+# Environments
+*.env
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+*.imap_settings.json
+.imap_settings.json

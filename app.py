@@ -152,7 +152,32 @@ def process_rasa_response(response, original_context):
     for item in response:
         if item.get("text"):
             result["messages"].append({"text": item["text"]})
+            
+        # Check for json_message format which is used by newer Rasa SDK
+        if item.get("json_message"):
+            json_data = item["json_message"]
+            
+            # Extract action information
+            if json_data.get("action"):
+                action = json_data["action"]
+                result["actions"].append(action)
+                
+                # For email checking actions, ensure we update the context properly
+                if action.get("name") == "check_email":
+                    # Make sure we include unread count in the context
+                    if action.get("unread_count") is not None:
+                        if not result["context"].get("email"):
+                            result["context"]["email"] = {}
+                        result["context"]["email"]["unread_count"] = action["unread_count"]
+            
+            # Update context with any new information
+            if json_data.get("context"):
+                result["context"].update(json_data["context"])
+                
+            # Continue processing other parts of the message
+            continue
 
+        # Handle legacy custom format
         if item.get("custom"):
             custom_data = item["custom"]
             if isinstance(custom_data, str):
@@ -165,14 +190,7 @@ def process_rasa_response(response, original_context):
 
             if custom_data.get("action"):
                 result["actions"].append(custom_data["action"])
-                event = {
-                    "action": custom_data["action"],
-                    "context": custom_data.get("context", {})
-                }
-                # Emit a custom event for action handlers
-                # This would be handled on the frontend
-                # window.dispatchEvent(new CustomEvent('rasa-custom-action', { detail: event }))
-
+                
             if custom_data.get("context"):
                 result["context"].update(custom_data["context"])
 
@@ -188,6 +206,23 @@ def process_rasa_response(response, original_context):
 
     return result
 
+@app.route('/api/save_imap_settings', methods=['POST'])
+def save_imap_settings():
+    try:
+        settings = request.json
+        
+        # Ensure the settings directory exists
+        settings_dir = os.path.join(app.root_path, 'settings')
+        os.makedirs(settings_dir, exist_ok=True)
+        
+        # Save settings to JSON file
+        settings_file = os.path.join(settings_dir, 'imap_settings.json')
+        with open(settings_file, 'w') as f:
+            json.dump(settings, f, indent=4)
+        
+        return jsonify({"success": True, "message": "IMAP settings saved successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))

@@ -24,23 +24,25 @@ pipeline:
     epochs: 100
     constrain_similarities: true
   
+  - name: NLUCommandAdapter
+  
   # Use standard FallbackClassifier instead of CALM components
   - name: FallbackClassifier
     threshold: 0.7
     ambiguity_threshold: 0.1
-  - name: NLUCommandAdapter
   
   # Use LLM
-  - name: SingleStepLLMCommandGenerator
+  - name: CompactLLMCommandGenerator
     llm:
-      model_group: openai-direct-gpt-4
+      # model_group: openai-direct-gpt-4
+      model_group: gemini_llm
     flow_retrieval:
       active: true  # Enable structured flow retrieval
 
 policies:
   - name: FlowPolicy
   - name: MemoizationPolicy
-  - name: RulePolicy
+  # - name: RulePolicy
   - name: TEDPolicy
     epochs: 100
     constrain_similarities: true

@@ -11,8 +11,6 @@ from typing import Dict, List, Any, Optional, Text
 
 # Increase the default timeout for IMAP connections
 imaplib._MAXLINE = 1000000
-
-
 class EmailMCP:
     """
     A Model Context Protocol implementation for email connectivity
@@ -36,6 +34,26 @@ class EmailMCP:
             "unread_count": 0,
             "selected_email": None
         }
+        
+        # If no settings provided, try to load from JSON file
+        if not self.settings:
+            self.load_settings_from_file()
+
+    def load_settings_from_file(self):
+        """Load IMAP settings from JSON file if available"""
+        try:
+            # Get the path relative to the current file
+            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            settings_file = os.path.join(current_dir, 'settings', 'imap_settings.json')
+            
+            if os.path.exists(settings_file):
+                with open(settings_file, 'r') as f:
+                    self.settings = json.load(f)
+                print("Loaded IMAP settings from file")
+            else:
+                print("Settings file not found: {}".format(settings_file))
+        except Exception as e:
+            print(f"Error loading settings from file: {e}")
 
     def connect(self, settings: Optional[Dict[str, Any]] = None):
         """
@@ -49,6 +67,9 @@ class EmailMCP:
         """
         if settings:
             self.settings = settings
+        elif not self.settings:
+            # Try to load settings from file if not already set
+            self.load_settings_from_file()
 
         if not self.settings:
             raise ValueError("Email settings not provided")
@@ -414,3 +435,50 @@ class EmailMCP:
             updates: Dictionary with context updates
         """
         self.context.update(updates)
+
+    def get_unread_emails(self, limit: int = 5):
+        """
+        Get unread emails from the current folder
+        
+        Args:
+            limit: Maximum number of unread emails to retrieve
+            
+        Returns:
+            List of unread email objects
+        """
+        if not self.is_connected():
+            print("Not connected to email server")
+            return []
+            
+        try:
+            # Search for unread emails
+            status, data = self.imap_conn.search(None, 'UNSEEN')
+            if status != 'OK':
+                print("Error searching for unread emails")
+                return []
+                
+            email_ids = data[0].split()
+            if not email_ids:
+                print("No unread emails found")
+                return []
+                
+            # Get most recent unread emails
+            email_ids = email_ids[-min(limit, len(email_ids)):]
+            
+            # Fetch unread emails
+            emails = []
+            for email_id in email_ids:
+                try:
+                    email_data = self.fetch_email(email_id)
+                    if email_data:
+                        emails.append(email_data)
+                except Exception as e:
+                    print(f"Error fetching email {email_id}: {e}")
+            
+            # Update context
+            self.context["unread_emails"] = emails
+            return emails
+            
+        except Exception as e:
+            print(f"Error getting unread emails: {e}")
+            return []

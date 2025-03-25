@@ -101,6 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Register callback for new emails before starting the service
             window.emailService.onNewEmail(handleNewEmail);
 
+            // Set the email service's message handler
+            window.emailService.addSystemMessageToChat = addSystemMessageToChat;
+
             // Start the email checking service
             window.emailService.start();
 
@@ -281,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showTypingIndicator();
 
         // Send message to Python backend and get response
-        fetch('/api/send_message', {
+        fetch('/api/rasa_message', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -757,8 +760,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const refreshButton = document.querySelector('.btn-refresh i');
         refreshButton.classList.add('fa-spin');
 
-        // Refresh emails from the background service
-        window.emailService.checkEmails();
+        // Refresh emails from the background service with userInitiated flag
+        window.emailService.sendCheckEmailRequest(null, {userInitiated: true});
 
         setTimeout(() => {
             refreshButton.classList.remove('fa-spin');
@@ -780,6 +783,10 @@ document.addEventListener('DOMContentLoaded', () => {
             showSettingsDialog();
         } else if (menuType === 'inbox') {
             showInboxView();
+        } else if (menuType === 'refresh') {
+            // Use userInitiated flag when manually refreshing
+            window.emailService.sendCheckEmailRequest(null, {userInitiated: true});
+            refreshChat();
         }
     }
 
@@ -1050,3 +1057,40 @@ function handleQuickReply(e) {
     // Focus on textarea so user can modify if needed
     chatInput.focus();
 }
+
+/**
+ * Add a system message to the chat (for background processes)
+ * @param {string} text - Message to add
+ * @param {Date} timestamp - Timestamp for the message
+ */
+function addSystemMessageToChat(text, timestamp = new Date()) {
+    // Only add if there's actual text content
+    if (!text || text.trim() === '') return;
+    
+    // Add the message to chat
+    showTypingIndicator();
+    setTimeout(() => {
+        hideTypingIndicator();
+        addMessageToChat('bot', text, timestamp);
+        
+        // Save this conversation to the database
+        window.mailoDB.saveConversation({
+            sender: 'bot',
+            message: text,
+            context: {
+                type: 'system_message',
+                source: 'email_service',
+                timestamp: timestamp.toISOString()
+            }
+        });
+        
+        // Update context with system message info
+        conversationContext.lastSystemMessage = {
+            text: text,
+            timestamp: timestamp.toISOString()
+        };
+    }, 1000);
+}
+
+// Make the function available globally for the email service to use
+window.addSystemMessageToChat = addSystemMessageToChat;

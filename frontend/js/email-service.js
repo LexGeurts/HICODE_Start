@@ -63,45 +63,84 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
          * @param {Object} action - The action object from Rasa
          * @param {Object} context - The context object from Rasa
          */
-        handleRasaAction(action, context) {
-            console.log('Received Rasa action:', action.name, action);
+    handleRasaAction(action, context) {
+        console.log('Received Rasa action:', action.name, action);
 
-            switch (action.name) {
-                case 'check_emails':
-                    // Update connection status from MCP
-                    if (context && context.connected !== undefined) {
-                        this.connected = context.connected;
-                        this.connectionStatus = this.connected ? "connected" : "disconnected";
+        switch (action.name) {
+            case 'check_email':
+                // Update connection status from MCP
+                if (context && context.connected !== undefined) {
+                    this.connected = context.connected;
+                    this.connectionStatus = this.connected ? "connected" : "disconnected";
+                    console.log(`Email connection status updated: ${this.connectionStatus}`);
+                }
+
+                // Update unread count if provided
+                if (action.unread_count !== undefined) {
+                    this.unreadCount = action.unread_count;
+                    console.log(`Updated unread count: ${this.unreadCount}`);
+                } else if (context && context.unread_count !== undefined) {
+                    this.unreadCount = context.unread_count;
+                    console.log(`Updated unread count from context: ${this.unreadCount}`);
+                }
+
+                // Process recent emails if provided in either action or context
+                let recentEmails = [];
+
+                // Try different field names to be resilient to format changes
+                if (action.emails && Array.isArray(action.emails)) {
+                    console.log('Found emails in action:', action.emails.length);
+                    recentEmails = action.emails;
+                } else if (context && context.recent_emails && Array.isArray(context.recent_emails)) {
+                    console.log('Found recent_emails in context:', context.recent_emails.length);
+                    recentEmails = context.recent_emails;
+                } else if (context && context.emails && Array.isArray(context.emails)) {
+                    console.log('Found emails in context:', context.emails.length);
+                    recentEmails = context.emails;
+                }
+
+                if (this.debugMode) {
+                    console.log('Recent emails to process:', recentEmails.length);
+                    if (recentEmails.length > 0) {
+                        console.log('First email sample:', recentEmails[0]);
                     }
+                }
 
-                    // Update unread count if provided
-                    if (action.unread_count !== undefined) {
-                        this.unreadCount = action.unread_count;
-                    } else if (context && context.unread_count !== undefined) {
-                        this.unreadCount = context.unread_count;
-                    }
-
-                    // Process recent emails if provided in either action or context
-                    let recentEmails = [];
-
-                    if (action.emails && Array.isArray(action.emails)) {
-                        recentEmails = action.emails;
-                    } else if (context && context.recent_emails && Array.isArray(context.recent_emails)) {
-                        recentEmails = context.recent_emails;
-                    } else if (context && context.emails && Array.isArray(context.emails)) {
-                        recentEmails = context.emails;
-                    }
-
-                    if (this.debugMode) {
-                        console.log('Recent emails detected:', recentEmails.length, recentEmails);
-                    }
-
-                    // Process recent emails
+                // Process each email
+                if (recentEmails.length > 0) {
+                    console.log(`Processing ${recentEmails.length} recent emails`);
+                    
                     recentEmails.forEach(email => {
-                        // Save to DB and notify
-                        this.saveAndNotifyEmail(this.formatMCPEmail(email));
+                        try {
+                            const formattedEmail = this.formatMCPEmail(email);
+                            console.log('Formatted email:', formattedEmail);
+                            
+                            // Save to DB and notify
+                            this.saveAndNotifyEmail(formattedEmail);
+                        } catch (error) {
+                            console.error('Error processing email:', error, email);
+                        }
                     });
-                    break;
+                    
+                    // Dispatch a custom event that new emails were processed
+                    window.dispatchEvent(new CustomEvent('emails-processed', { 
+                        detail: { count: recentEmails.length } 
+                    }));
+                }
+
+                // Display email check results if this isn't a silent check
+                if (!action.silent && window.addSystemMessageToChat) {
+                    let message = "I've checked your emails.";
+                    
+                    if (this.unreadCount > 0) {
+                        message = `I've checked your emails. You have ${this.unreadCount} unread messages.`;
+                    } else {
+                        message = "I've checked your emails. You have no new messages.";
+                    }
+                    
+                    window.addSystemMessageToChat(message);
+                }
+                break;
 
                 case 'email_notification':
                     // Handle notification about new emails from background checker
@@ -162,7 +201,7 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
             this.isRunning = true;
 
             // Immediately check for emails
-            this.checkEmails();
+            // this.checkEmails();
 
             // Set up interval for checking emails
             this.checkInterval = setInterval(() => {
@@ -170,7 +209,7 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
             }, EMAIL_CHECK_INTERVAL);
         }
 
-        /**
+        /**=
          * Stop the background email checking service
          */
         stop() {
@@ -213,10 +252,26 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
                 this.lastCheckTime = new Date();
 
                 // Send check email request to Rasa with IMAP settings
-                const response = await this.sendCheckEmailRequest(settings);
+                const response = await this.sendCheckEmailRequest(settings, {
+                    folder: this.currentFolder,
+                    limit: 10
+                });
 
-                if (this.debugMode && response) {
-                    console.log('Email check complete. Response:', response);
+                // Add chat notification about the check
+                if (response && window.addSystemMessageToChat) {
+                    // Only notify if this is not triggered by the user explicitly asking
+                    if (!this.userInitiatedCheck) {
+                        const timestamp = new Date();
+                        let message = "I've checked your emails.";
+                        
+                        if (response.unread_count && response.unread_count > 0) {
+                            message = `I've checked your emails. You have ${response.unread_count} unread messages.`;
+                        }
+                        
+                        window.addSystemMessageToChat(message, timestamp);
+                    }
+                    // Reset the flag
+                    this.userInitiatedCheck = false;
                 }
 
                 return response;
@@ -266,7 +321,7 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
                         message: "check my emails",
                         context: {
                             imap_settings: settings,
-                            action: "check_emails",
+                            action: "check_email",
                             options: requestOptions,
                             email_limit: requestOptions.limit
                         }
@@ -285,6 +340,11 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
                     console.warn('Server returned error:', data.error);
                     // The context is still returned even on error
                     return data;
+                }
+
+                // Set flag if this was initiated by user request vs background check
+                if (options.userInitiated) {
+                    this.userInitiatedCheck = true;
                 }
 
                 return data;

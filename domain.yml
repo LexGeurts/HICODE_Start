@@ -7,9 +7,15 @@ intents:
   # Basic conversation intents
   - greet
   - goodbye
+  - help
   - affirm
   - deny
-  - help
+
+  # Task intents
+  - main_task
+  - email_task
+  - draft_task
+  - translate_task
   
   # Email checking/inbox intents
   - read_email
@@ -55,6 +61,11 @@ intents:
   - test_email_connection
 
 entities:
+  - main_task
+  - email_task
+  - draft_task
+  - translate_task
+  - email_filter
   - sender
   - date
   - subject
@@ -66,19 +77,124 @@ entities:
   - email_number
 
 #########################################################
-# Define forms and slots here                            
+# Define slots here                            
 #########################################################
-forms:
-  email_form:
-    required_slots:
-      - email_filter
-
 slots:
+  main_task:
+    type: text
+    mappings:
+      - type: from_llm
+        entity: main_task
+  
+  email_task:
+    type: text
+    mappings:
+      - type: from_llm
+        entity: email_task
+
+  draft_task:
+    type: text
+    mappings:
+      - type: from_llm
+        entity: draft_task
+
+  translate_task:
+    type: text
+    mappings:
+      - type: from_llm
+        entity: translate_task
+
+  email_connected:
+    type: bool
+    mappings:
+      - type: from_llm
+
+  has_emails:
+    type: bool
+    mappings:
+      - type: from_llm
+
+  mcp_context:
+    type: any
+    mappings:
+      - type: from_llm
+
+  emails:
+    type: any
+    mappings:
+      - type: from_llm
+
   email_filter:
     type: text
     mappings:
       - type: from_entity
         entity: email_filter
+
+  
+        
+  # Email flow slots
+  email_action:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+      
+  search_criteria:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+      
+  search_term:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+      
+  further_email_action:
+    type: bool
+    influence_conversation: true
+    mappings:
+      - type: from_intent
+        intent: affirm
+        value: true
+      - type: from_intent
+        intent: deny
+        value: false
+        
+  read_option:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+      
+  forwarding_email:
+    type: bool
+    influence_conversation: true
+    mappings:
+      - type: from_intent
+        intent: forward_email
+        value: true
+        
+  current_email_id:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_text
+      
+  email_id:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: email_id
+        
+  # IMAP Settings slot
+  imap_settings:
+    type: any
+    influence_conversation: false
+    mappings:
+      - type: custom
 
 #########################################################
 # Define responses                           
@@ -86,85 +202,121 @@ slots:
 responses:
   # Original responses
   utter_greet:
-  - text: "Hey! I'm MailoBot, your email assistant. How can I help you today?"
+    - text: "Hey! I'm MailoBot, your email assistant. How can I help you today?"
 
   utter_cheer_up:
-  - text: "Here is something to cheer you up:"
-    image: "https://i.imgur.com/nGF1K8f.jpg"
+    - text: "Here is something to cheer you up:"
+      image: "https://i.imgur.com/nGF1K8f.jpg"
 
   utter_did_that_help:
-  - text: "Did that help you?"
+    - text: "Did that help you?"
 
   utter_happy:
-  - text: "Great, carry on!"
+    - text: "Great, carry on!"
+      metadata:
+        rephrase: True
 
   utter_goodbye:
-  - text: "Bye! Feel free to reach out if you need more help with your emails."
+    - text: "Bye! Feel free to reach out if you need more help with your emails."
+      metadata:
+        rephrase: True
 
   utter_iamabot:
-  - text: "I am MailoBot, your email assistant. I'm designed to help you manage your emails efficiently."
+    - text: "I am MailoBot, your email assistant. I'm designed to help you manage your emails efficiently."
+      metadata:
+        rephrase: True
+
   
   # Main flow responses
   utter_welcome:
-  - text: "Welcome to MailoBot! I can help you manage your emails. How can I assist you today?"
-  
+    - text: "Welcome to MailoBot! I can help you manage your emails. How can I assist you today?"
+      metadata:
+        rephrase: True
+
   utter_help:
-  - text: "I can help you with several email tasks, including:"
-  - text: "- Organizing your inbox into folders and categories"
-  - text: "- Drafting new emails with customizable tone and content"
-  - text: "- Searching for specific emails by sender, subject, date, or content"
-  - text: "- Managing attachments and email actions"
-  - text: "What would you like help with?"
+    - text: "I can help you with several email tasks, including:\n\n- Checking your and reading new emails, managing your inbox.\n- Drafting new or replying emails with customizable tone and content.\n- Searching for specific emails by sender, subject, date, or content.\n- Translating emails to different languages."
+
+  # Task responses/utterances
+  utter_ask_main_task:
+    - text: "What will you like to do right now?"
+      metadata:
+        rephrase: True
+
+  utter_ask_email_task:
+    - text: "What will you like to do with your email right now?"
+      metadata:
+        rephrase: True
+
+  utter_ask_draft_task:
+    - text: "Is your reply to a new email or response to the email?"
+      metadata:
+        rephrase: True
+
+  utter_ask_translate_task:
+    - text: "Which email you want to translate and to which language?"
+      metadata:
+        rephrase: True
   
   # Email management responses
   utter_start_management:
-  - text: "I can help you organize your inbox. What would you like to do with your emails?"
-  
-  # Email drafting responses
-  utter_start_drafting:
-  - text: "I'll help you draft an email. Who would you like to send it to?"
+    - text: "I can help you organize your inbox. What would you like to do with your emails?"
   
   # Email search responses
   utter_start_search:
-  - text: "I can help you search for specific emails in your inbox. What would you like to find?"
+    - text: "I can help you search for specific emails in your inbox. What would you like to find?"
 
   # Email checking responses
-  utter_checking_email:
-  - text: "Checking for new emails. One moment please..."
+  utter_check_email:
+    - text: "Checking for new emails. One moment please..."
   
   utter_no_new_emails:
-  - text: "I didn't find any new emails in your inbox."
+    - text: "I didn't find any new emails in your inbox."
   
   # Inbox responses
   utter_show_inbox:
-  - text: "Here's your inbox:"
+    - text: "Here's your inbox:"
   
   utter_empty_inbox:
-  - text: "Your inbox is empty. No emails to display."
+    - text: "Your inbox is empty. No emails to display."
   
   utter_email_actions:
-  - text: "What would you like to do with your emails? You can ask me to read specific emails, mark them as read, or archive them."
+    - text: "What would you like to do with your emails? You can ask me to read specific emails, mark them as read, or archive them."
+    
+  utter_ask_email_action:
+    - text: "What would you like to do with your email? You can check new emails, read specific emails, or search for emails."
+    
+  utter_ask_further_action:
+    - text: "Would you like to do anything else with your emails?"
+    
+  utter_ask_search_criteria:
+    - text: "What would you like to search for? You can search by sender, subject, date, or content."
+    
+  utter_did_not_understand:
+    - text: "I'm sorry I am unable to understand you, could you please rephrase?"
+    
+  utter_checking_emails:
+    - text: "Checking your emails, please wait a moment..."
   
   # Additional draft email responses
   utter_ask_subject:
-  - text: "What should be the subject of your email?"
+    - text: "What should be the subject of your email?"
   
   utter_ask_content:
-  - text: "Now, what would you like to write in the body of your email?"
+    - text: "Now, what would you like to write in the body of your email?"
   
   utter_draft_options:
-  - text: "Your draft is ready. Would you like to send it, edit it, or save it as a draft?"
+    - text: "Your draft is ready. Would you like to send it, edit it, or save it as a draft?"
   
   # Read email responses
   utter_post_read_options:
-  - text: "What would you like to do with this email? You can reply, forward, archive, or delete it."
+    - text: "What would you like to do with this email? You can reply, forward, archive, or delete it."
 
   # Add new responses for LLM features
   utter_ask_language:
-  - text: "Which language would you like me to translate this email to?"
+    - text: "Which language would you like me to translate this email to?"
 
   utter_ask_tone:
-  - text: "What tone would you like for your email? (professional, friendly, formal)"
+    - text: "What tone would you like for your email? (professional, friendly, formal)"
 
   # Additional responses
   utter_read_email:
@@ -172,6 +324,9 @@ responses:
 
   utter_setup_email:
     - text: "To set up your email, go to the settings panel and enter your IMAP server details. You'll need your email server, username, password, and port. Let me know when you're ready to test the connection."
+
+  utter_emails_found:
+    - text: "I found some emails, would you like to me to read it."
 
   utter_no_emails_found:
     - text: "I couldn't find any emails in your inbox."
@@ -192,73 +347,91 @@ responses:
     - text: "The email has been marked as unread."
 
   utter_analyze_thread:
-  - text: "I'm analyzing this email thread to give you context and key points. One moment..."
+    - text: "I'm analyzing this email thread to give you context and key points. One moment..."
 
   utter_delete_emails:
-  - text: "I'll help you delete multiple emails. Please confirm which emails you want to delete."
+    - text: "I'll help you delete multiple emails. Please confirm which emails you want to delete."
 
   utter_discard_draft:
-  - text: "Your draft has been discarded. Is there anything else you'd like to do?"
+    - text: "Your draft has been discarded. Is there anything else you'd like to do?"
 
   utter_draft_email:
-  - text: "I'll help you draft a new email. Who would you like to send it to?"
+    - text: "I'll help you draft a new email. Who would you like to send it to?"
+      metadata:
+        rephrase: True
 
   utter_edit_draft:
-  - text: "I've opened your draft for editing. What changes would you like to make?"
+    - text: "I've opened your draft for editing. What changes would you like to make?"
 
   utter_forward_email:
-  - text: "I'll help you forward this email. Who would you like to forward it to?"
+    - text: "I'll help you forward this email. Who would you like to forward it to?"
 
   utter_mention_email_id:
-  - text: "I'll look for the email with that ID. One moment please..."
+    - text: "I'll look for the email with that ID. One moment please..."
 
   utter_mention_sender:
-  - text: "I'll find emails from that sender. Let me search your inbox..."
+    - text: "I'll find emails from that sender. Let me search your inbox..."
 
   utter_mood_great:
-  - text: "I'm glad to hear you're doing well! How can I help with your emails today?"
+    - text: "I'm glad to hear you're doing well! How can I help with your emails today?"
+      metadata:
+        rephrase: True
+
+  utter_mood_unhappy:
+    - text: "I'm sorry to hear that. How can I help improve your day?"
+      metadata:
+        rephrase: True
 
   utter_reply_to_email:
-  - text: "I'll help you draft a reply to this email. What would you like to say?"
+    - text: "I'll help you draft a reply to this email. What would you like to say?"
+      metadata:
+        rephrase: True
 
   utter_save_draft:
-  - text: "Your email has been saved as a draft. You can access it later from your drafts folder."
+    - text: "Your email has been saved as a draft. You can access it later from your drafts folder."
 
   utter_search_by_content:
-  - text: "I'll search for emails containing that text in the body. Let me look through your inbox..."
+    - text: "I'll search for emails containing that text in the body. Let me look through your inbox..."
 
   utter_search_by_date:
-  - text: "I'll find emails from that date or time period. Searching your inbox now..."
+    - text: "I'll find emails from that date or time period. Searching your inbox now..."
 
   utter_search_by_sender:
-  - text: "I'll search for emails from that sender. Looking through your inbox now..."
+    - text: "I'll search for emails from that sender. Looking through your inbox now..."
 
   utter_search_by_subject:
-  - text: "I'll find emails with that subject line. Searching your inbox..."
+    - text: "I'll find emails with that subject line. Searching your inbox..."
 
   utter_select_email:
-  - text: "I've selected that email for you. What would you like to do with it?"
+    - text: "I've selected that email for you. What would you like to do with it?"
 
   utter_send_email:
-  - text: "Your email has been sent successfully."
+    - text: "Your email has been sent successfully."
 
   utter_summarize_email:
-  - text: "Here's a summary of the key points from this email:"
+    - text: "Here's a summary of the key points from this email:"
 
   utter_translate_email:
-  - text: "I'll translate this email. One moment while I process the content..."
+    - text: "I'll translate this email. One moment while I process the content..."
+      metadata:
+        rephrase: True
 
   utter_open_email:
-  - text: "Opening the selected email for you now."
-  - text: "Here's the email content you requested."
+    - text: "Opening the selected email for you now."
+      metadata:
+        rephrase: True
+    - text: "Here's the email content you requested."
+      metadata:
+        rephrase: True
+
+  # Override the default pattern configuration            
+  utter_cannot_handle:
+    - text: Working around the request.
+      metadata:
+        rephrase: True
 
 #########################################################
 # Define actions                          
 #########################################################
 actions:
-  - action_check_email
-  - action_test_email_connection
-
-session_config:
-  session_expiration_time: 60
-  carry_over_slots_to_new_session: true
+  - action_check_emails
