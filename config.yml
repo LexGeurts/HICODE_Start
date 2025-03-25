@@ -32,7 +32,7 @@ pipeline:
     ambiguity_threshold: 0.1
   
   # Use LLM
-  - name: SingleStepLLMCommandGenerator
+  - name: CompactLLMCommandGenerator
     llm:
       # model_group: openai-direct-gpt-4
       model_group: gemini_llm

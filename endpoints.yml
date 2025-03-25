@@ -59,7 +59,6 @@ model_groups:
   #     - provider: openai
   #       model: gpt-4.5-preview
   #       api_key: ${OPENAI_API_KEY}
-        # api_base: "https://tutorial-llm.rasa.ai"
 
 # Added CORS configuration to allow all origins
 cors:

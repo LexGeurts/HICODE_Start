@@ -159,7 +159,16 @@ def process_rasa_response(response, original_context):
             
             # Extract action information
             if json_data.get("action"):
-                result["actions"].append(json_data["action"])
+                action = json_data["action"]
+                result["actions"].append(action)
+                
+                # For email checking actions, ensure we update the context properly
+                if action.get("name") == "check_email":
+                    # Make sure we include unread count in the context
+                    if action.get("unread_count") is not None:
+                        if not result["context"].get("email"):
+                            result["context"]["email"] = {}
+                        result["context"]["email"]["unread_count"] = action["unread_count"]
             
             # Update context with any new information
             if json_data.get("context"):

@@ -127,6 +127,19 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
                         detail: { count: recentEmails.length } 
                     }));
                 }
+
+                // Display email check results if this isn't a silent check
+                if (!action.silent && window.addSystemMessageToChat) {
+                    let message = "I've checked your emails.";
+                    
+                    if (this.unreadCount > 0) {
+                        message = `I've checked your emails. You have ${this.unreadCount} unread messages.`;
+                    } else {
+                        message = "I've checked your emails. You have no new messages.";
+                    }
+                    
+                    window.addSystemMessageToChat(message);
+                }
                 break;
 
                 case 'email_notification':
@@ -239,10 +252,26 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
                 this.lastCheckTime = new Date();
 
                 // Send check email request to Rasa with IMAP settings
-                const response = await this.sendCheckEmailRequest(settings);
+                const response = await this.sendCheckEmailRequest(settings, {
+                    folder: this.currentFolder,
+                    limit: 10
+                });
 
-                if (this.debugMode && response) {
-                    console.log('Email check complete. Response:', response);
+                // Add chat notification about the check
+                if (response && window.addSystemMessageToChat) {
+                    // Only notify if this is not triggered by the user explicitly asking
+                    if (!this.userInitiatedCheck) {
+                        const timestamp = new Date();
+                        let message = "I've checked your emails.";
+                        
+                        if (response.unread_count && response.unread_count > 0) {
+                            message = `I've checked your emails. You have ${response.unread_count} unread messages.`;
+                        }
+                        
+                        window.addSystemMessageToChat(message, timestamp);
+                    }
+                    // Reset the flag
+                    this.userInitiatedCheck = false;
                 }
 
                 return response;
@@ -311,6 +340,11 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
                     console.warn('Server returned error:', data.error);
                     // The context is still returned even on error
                     return data;
+                }
+
+                // Set flag if this was initiated by user request vs background check
+                if (options.userInitiated) {
+                    this.userInitiatedCheck = true;
                 }
 
                 return data;

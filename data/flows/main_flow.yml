@@ -4,34 +4,9 @@ version: "3.1"
 flows:
   main_flow:
     description: Main welcome conversation flow for MailoBot email assistant
-    # persisted_slots:
-    #   - main_task
     nlu_trigger:
       - intent: greet
       - intent: goodbye
       - intent: help
     steps:
       - action: utter_help
-      # - collect: main_task
-      #   description: Ask user what they want to do with their emails.
-      #   next:
-      #     - if: context.main_task contains "check"
-      #       then:
-      #         - action: utter_check_email
-      #         - link: email_flow
-      #     - if: context.main_task contains "draft"
-      #       then:
-      #         - action: utter_draft_email
-      #         - link: draft_flow
-      #     - if: context.main_task contains "translate"
-      #       then:
-      #         - action: utter_translate_email
-      #         - link: draft_flow # replace with translate_flow
-      #     - else:
-      #         - call: chitchat_flow
-      #           next: END
-
-  # chitchat_flow:
-  #   description: Handle small talk and chitchat
-  #   steps:
-  #     - action: utter_cheer_up # change to action (action_trigger_chitchat) for llm chitchat

@@ -2,14 +2,14 @@ version: "3.1"
 
 flows:
   email_flow:
-    description: Flow for read and managing emails.
+    description: Flow for checking, reading and managing emails.
     nlu_trigger:
       - intent: check_email
     steps:
       - collect: email_task
         description: Ask user what they want to do with their emails.
         next:
-          - if: slots.email_task contains "check my emails"
+          - if: slots.email_task contains 'check my emails'
             then:
               - action: utter_check_email
               - action: action_check_emails

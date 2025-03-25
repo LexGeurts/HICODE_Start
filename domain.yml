@@ -104,8 +104,23 @@ slots:
       - type: from_llm
         entity: translate_task
 
+  email_connected:
+    type: bool
+    mappings:
+      - type: from_llm
+
   has_emails:
     type: bool
+    mappings:
+      - type: from_llm
+
+  mcp_context:
+    type: any
+    mappings:
+      - type: from_llm
+
+  emails:
+    type: any
     mappings:
       - type: from_llm
 
