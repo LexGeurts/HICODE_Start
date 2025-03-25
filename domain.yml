@@ -61,6 +61,7 @@ intents:
   - test_email_connection
 
 entities:
+  - affirm
   - main_task
   - email_task
   - draft_task
@@ -80,6 +81,15 @@ entities:
 # Define slots here                            
 #########################################################
 slots:
+  affirm:
+    type: bool
+    initial_value: false
+    mappings:
+      - type: from_llm
+        allow_nlu_correction: true
+      - type: from_entity 
+        entity: affirm
+
   main_task:
     type: text
     mappings:
@@ -130,72 +140,6 @@ slots:
       - type: from_entity
         entity: email_filter
 
-  
-        
-  # Email flow slots
-  email_action:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  search_criteria:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  search_term:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  further_email_action:
-    type: bool
-    influence_conversation: true
-    mappings:
-      - type: from_intent
-        intent: affirm
-        value: true
-      - type: from_intent
-        intent: deny
-        value: false
-        
-  read_option:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  forwarding_email:
-    type: bool
-    influence_conversation: true
-    mappings:
-      - type: from_intent
-        intent: forward_email
-        value: true
-        
-  current_email_id:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  email_id:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_entity
-        entity: email_id
-        
-  # IMAP Settings slot
-  imap_settings:
-    type: any
-    influence_conversation: false
-    mappings:
-      - type: custom
-
 #########################################################
 # Define responses                           
 #########################################################
@@ -226,6 +170,10 @@ responses:
       metadata:
         rephrase: True
 
+  utter_affirm:
+    - text: "Please confirm."
+      metadata:
+        rephrase: True
   
   # Main flow responses
   utter_welcome:
@@ -321,6 +269,9 @@ responses:
   # Additional responses
   utter_read_email:
     - text: "I will help you get and read your email"
+
+  utter_search_emails:
+    - text: "I will help you search and read the email"
 
   utter_setup_email:
     - text: "To set up your email, go to the settings panel and enter your IMAP server details. You'll need your email server, username, password, and port. Let me know when you're ready to test the connection."
@@ -427,6 +378,11 @@ responses:
   # Override the default pattern configuration            
   utter_cannot_handle:
     - text: Working around the request.
+      metadata:
+        rephrase: True
+        
+  utter_internal_error:
+    - text: Working....
       metadata:
         rephrase: True
 

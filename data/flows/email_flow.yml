@@ -2,14 +2,16 @@ version: "3.1"
 
 flows:
   email_flow:
-    description: Flow for checking, reading and managing emails.
+    description: Flow for checking, reading and searching emails
     nlu_trigger:
       - intent: check_email
+      - intent: read_email
+      - intent: search_emails
     steps:
       - collect: email_task
         description: Ask user what they want to do with their emails.
         next:
-          - if: slots.email_task contains 'check my emails'
+          - if: (slots.email_task contains 'check my emails' or slots.email_task contains 'check email')
             then:
               - action: utter_check_email
               - action: action_check_emails
@@ -17,10 +19,25 @@ flows:
                   - if: slots.has_emails
                     then:
                       - action: utter_emails_found
-                        next: END
+                      - collect: affirm
+                        description: Ask user if they want to read the emails.
+                        next:
+                          - if: slots.affirm
+                            then: read_email_flow
+                          - else: END 
                   - else:
                     - action: utter_no_emails_found
                       next: END
+          - if: (slots.email_task contains 'search' or slots.email_task contains 'read')
+            then: 
+              - action: utter_search_emails
+              # - action: action_search_emails
+                next: END
           - else:
               - action: utter_reply_to_email
                 next: END
+
+      - id: read_email_flow
+        action: utter_read_email
+        # - action: action_read_email
+        next: END            

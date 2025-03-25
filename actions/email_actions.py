@@ -155,9 +155,8 @@ class ActionTestEmailConnection(Action):
     def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        # Get IMAP settings from context
-        imap_settings = tracker.get_latest_message().get(
-            "metadata", {}).get("imap_settings")
+        """Get an initialized email client with settings from the JSON file"""
+        imap_settings = load_imap_settings()
 
         if not imap_settings:
             dispatcher.utter_message(
