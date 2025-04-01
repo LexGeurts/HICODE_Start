@@ -6,7 +6,10 @@ import email
 import json
 import os
 import re
+import smtplib
 from email.header import decode_header
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Dict, List, Any, Optional, Text
 
 # Increase the default timeout for IMAP connections
@@ -482,3 +485,141 @@ class EmailMCP:
         except Exception as e:
             print(f"Error getting unread emails: {e}")
             return []
+
+    def save_draft(self, draft_data: Dict[str, Any]) -> bool:
+        """
+        Save a draft email to the IMAP server
+        
+        Args:
+            draft_data: Dictionary with email draft data (to, subject, body, etc.)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if not self.is_connected():
+            print("Not connected to email server")
+            return False
+            
+        try:
+            # Select drafts folder (create if not exists)
+            drafts_folder = "Drafts"
+            if not self.select_folder(drafts_folder):
+                # Try different common names for drafts folder
+                for folder_name in ["Draft", "DRAFTS", "Drafts", "[Gmail]/Drafts"]:
+                    if self.select_folder(folder_name):
+                        drafts_folder = folder_name
+                        break
+                else:
+                    print(f"Could not find or create drafts folder")
+                    return False
+            
+            # Create email message
+            msg = MIMEMultipart()
+            msg['From'] = draft_data.get('from', self.settings['username'])
+            msg['To'] = draft_data.get('to', '')
+            msg['Subject'] = draft_data.get('subject', '')
+            
+            # Add body
+            body = draft_data.get('body', '')
+            msg.attach(MIMEText(body, 'plain'))
+            
+            # Convert to string
+            raw_message = msg.as_string()
+            
+            # Save to drafts folder
+            result = self.imap_conn.append(drafts_folder, '\\Draft', None, raw_message.encode('utf-8'))
+            
+            if result[0] == 'OK':
+                print(f"Draft saved to {drafts_folder} folder")
+                # Update context
+                if not self.context.get('drafts'):
+                    self.context['drafts'] = []
+                
+                self.context['drafts'].append(draft_data)
+                return True
+            else:
+                print(f"Failed to save draft: {result}")
+                return False
+                
+        except Exception as e:
+            print(f"Error saving draft: {e}")
+            self.context['error'] = str(e)
+            return False
+
+    def send_email(self, email_data: Dict[str, Any]) -> bool:
+        """
+        Send an email using SMTP
+        
+        Args:
+            email_data: Dictionary with email data (to, subject, body, etc.)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if not self.settings:
+            print("No email settings available")
+            self.context['error'] = "No email settings available"
+            return False
+            
+        try:
+            # Create email message
+            msg = MIMEMultipart()
+            msg['From'] = email_data.get('from', self.settings['username'])
+            msg['To'] = email_data.get('to', '')
+            msg['Subject'] = email_data.get('subject', '')
+            
+            # Add body
+            body = email_data.get('body', '')
+            msg.attach(MIMEText(body, 'plain'))
+            
+            # Determine SMTP settings based on IMAP settings
+            smtp_host = self.settings.get('smtp_host') or self.settings['host'].replace('imap', 'smtp')
+            smtp_port = self.settings.get('smtp_port') or 587  # Default to 587 for TLS
+            
+            # Create SMTP connection
+            if self.settings.get('tls', True):
+                smtp_conn = smtplib.SMTP(smtp_host, smtp_port)
+                smtp_conn.starttls()
+            else:
+                smtp_conn = smtplib.SMTP(smtp_host, smtp_port)
+            
+            # Login with credentials
+            smtp_conn.login(self.settings['username'], self.settings['password'])
+            
+            # Send email
+            to_list = [addr.strip() for addr in email_data.get('to', '').split(',') if addr.strip()]
+            if not to_list:
+                raise ValueError("No recipients specified")
+                
+            smtp_conn.sendmail(
+                msg['From'],
+                to_list,
+                msg.as_string()
+            )
+            
+            # Close connection
+            smtp_conn.quit()
+            
+            print(f"Email sent successfully to {msg['To']}")
+            
+            # Update context
+            sent_email = {
+                "to": email_data.get('to', ''),
+                "subject": email_data.get('subject', ''),
+                "body": email_data.get('body', ''),
+                "from": email_data.get('from', self.settings['username']),
+                "timestamp": email_data.get('timestamp', ''),
+                "folder": "sent"
+            }
+            
+            if not self.context.get('sent_emails'):
+                self.context['sent_emails'] = []
+                
+            self.context['sent_emails'].append(sent_email)
+            return True
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"Error sending email: {error_msg}")
+            self.context['error'] = error_msg
+            return False

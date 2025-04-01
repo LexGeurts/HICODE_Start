@@ -29,8 +29,6 @@ def serve_static(path):
         return send_from_directory(app.static_folder, path)
     return send_from_directory(app.static_folder, 'index.html')
 
-# Endpoint to check if Rasa server is available
-
 
 @app.route('/api/check_rasa', methods=['GET'])
 def check_rasa():
@@ -106,27 +104,10 @@ def rasa_message():
     }
 
     try:
-        # Set shorter timeout to prevent long waits on failures
-        response = requests.post(rasa_url, json=payload, timeout=10)
+        response = requests.post(rasa_url, json=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
         return jsonify(process_rasa_response(data, context))
-    except Timeout:
-        error_message = "Request to Rasa server timed out. Please check if the server is running and responsive."
-        logger.error(error_message)
-        return jsonify({
-            "error": error_message,
-            "context": context,
-            "messages": [{"text": "I'm sorry, I couldn't process your request in time. Please try again later."}]
-        }), 504
-    except ConnectionError:
-        error_message = "Could not connect to Rasa server. Please check if the server is running."
-        logger.error(error_message)
-        return jsonify({
-            "error": error_message,
-            "context": context,
-            "messages": [{"text": "I'm having trouble connecting to my backend services. Please ensure the Rasa server is running."}]
-        }), 503
     except RequestException as e:
         error_message = f"Error communicating with Rasa server: {str(e)}"
         logger.error(error_message)

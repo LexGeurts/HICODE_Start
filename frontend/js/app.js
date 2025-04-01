@@ -1,6 +1,86 @@
 /**
  * MailoBot Client-side JavaScript
  */
+
+// Global voice-related variables and functions
+let recognition = null;
+let isListening = false;
+let synth = window.speechSynthesis;
+let isSpeaking = false;
+
+/**
+ * Toggle speech recognition
+ */
+function toggleSpeechRecognition() {
+    if (isListening) {
+        recognition.stop();
+    } else {
+        // Clear any existing text
+        document.querySelector('.chat-input textarea').value = '';
+        recognition.start();
+    }
+}
+
+/**
+ * Speak text using text-to-speech
+ * @param {string} text - Text to be spoken
+ */
+function speakText(text) {
+    // Cancel any ongoing speech
+    synth.cancel();
+    
+    // Get checkbox state directly from DOM
+    const autoReadCheckbox = document.getElementById('autoReadResponses');
+    
+    // Only continue if auto-read is enabled
+    if (!autoReadCheckbox || !autoReadCheckbox.checked) return;
+    
+    // Clean text of HTML tags
+    const cleanText = text.replace(/<[^>]*>?/gm, '');
+    
+    // Create a new utterance
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    // Try to get a more natural voice
+    let voices = synth.getVoices();
+    let preferredVoice = voices.find(voice => 
+        voice.name.includes('Samantha') || 
+        voice.name.includes('Google') || 
+        voice.name.includes('Natural') ||
+        (voice.name.includes('US') && voice.name.includes('Female'))
+    );
+    
+    if (preferredVoice) {
+        utterance.voice = preferredVoice;
+    }
+    
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9; // Slightly slower rate for more natural sound
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    
+    utterance.onstart = () => {
+        isSpeaking = true;
+        console.log('Speaking with voice:', utterance.voice ? utterance.voice.name : 'Default voice');
+    };
+    
+    utterance.onend = () => {
+        isSpeaking = false;
+    };
+    
+    utterance.onerror = (event) => {
+        console.error('Speech synthesis error', event);
+        isSpeaking = false;
+    };
+    
+    // Speak the text
+    synth.speak(utterance);
+}
+
+// Make the functions available globally
+window.toggleSpeechRecognition = toggleSpeechRecognition;
+window.speakText = speakText;
+
 document.addEventListener('DOMContentLoaded', () => {
     // Check if required dependencies are loaded
     if (!window.mailoDB) {
@@ -19,6 +99,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatMessages = document.querySelector('.chat-messages');
     const chatInput = document.querySelector('.chat-input textarea');
     const sendButton = document.querySelector('.send-button');
+    const micButton = document.querySelector('.mic-button');
+    const voiceIndicator = document.querySelector('.voice-indicator');
+    const autoReadCheckbox = document.getElementById('autoReadResponses');
+    const voiceControls = document.querySelector('.voice-controls');
     const suggestionChips = document.querySelectorAll('.suggestion-chip');
     const clearButton = document.querySelector('.btn-clear');
     const refreshButton = document.querySelector('.btn-refresh');
@@ -65,6 +149,84 @@ document.addEventListener('DOMContentLoaded', () => {
     emailProviderButtons.forEach(button => {
         button.addEventListener('click', setEmailProviderDefaults);
     });
+
+    // Initialize the voices as soon as possible
+    function initVoices() {
+        return new Promise((resolve) => {
+            if (synth.getVoices().length > 0) {
+                resolve(synth.getVoices());
+                return;
+            }
+            
+            synth.onvoiceschanged = () => {
+                resolve(synth.getVoices());
+            };
+        });
+    }
+    
+    // Initialize voices
+    initVoices().then(voices => {
+        console.log('Available voices:', voices.map(v => v.name).join(', '));
+    });
+    
+    // Initialize speech recognition if supported
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+            isListening = true;
+            micButton.classList.add('listening');
+            voiceIndicator.style.display = 'block';
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = Array.from(event.results)
+                .map(result => result[0])
+                .map(result => result.transcript)
+                .join('');
+            
+            chatInput.value = transcript;
+            autoResizeTextarea();
+        };
+
+        recognition.onend = () => {
+            isListening = false;
+            micButton.classList.remove('listening');
+            voiceIndicator.style.display = 'none';
+            
+            // If we have content, send after a short delay to allow user to see what was recognized
+            if (chatInput.value.trim()) {
+                setTimeout(() => {
+                    sendMessage();
+                }, 1000);
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error', event.error);
+            isListening = false;
+            micButton.classList.remove('listening');
+            voiceIndicator.style.display = 'none';
+        };
+
+        // Add event listener for the mic button
+        micButton.addEventListener('click', toggleSpeechRecognition);
+        
+        // Show voice controls since speech is supported
+        if (voiceControls) {
+            voiceControls.style.display = 'flex';
+            console.log('Voice controls should be visible');
+        }
+    } else {
+        // Hide mic button if speech recognition is not supported
+        if (micButton) micButton.style.display = 'none';
+        if (voiceControls) voiceControls.style.display = 'none';
+        console.warn('Speech recognition not supported in this browser');
+    }
 
     /**
      * Initialize MailoBot and its services
@@ -284,17 +446,30 @@ document.addEventListener('DOMContentLoaded', () => {
         showTypingIndicator();
 
         // Send message to Python backend and get response
-        fetch('/api/rasa_message', {
+        fetch('/api/rasa_message', {  // Changed from send_message to rasa_message
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ message: message, context: conversationContext })
         })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log("Response from Rasa:", data); // Debug: log the response
                 const responseTimestamp = new Date();
                 hideTypingIndicator();
+
+                // Check if data is in the expected format
+                if (data.fallback_response) {
+                    // Handle fallback response (error case)
+                    addMessageToChat('bot', data.fallback_response[0].text, responseTimestamp);
+                    return;
+                }
 
                 // Process Rasa response
                 handleRasaResponse(data, responseTimestamp);
@@ -303,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const errorTimestamp = new Date();
                 console.error('Error getting response from Rasa:', error);
                 hideTypingIndicator();
-                addMessageToChat('bot', 'Sorry, I encountered network error. Please try again later.', errorTimestamp);
+                addMessageToChat('bot', 'Sorry, I encountered a network error. Please try again later.', errorTimestamp);
             });
     }
 
@@ -313,9 +488,29 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {Date} timestamp - Timestamp when response was received
      */
     function handleRasaResponse(response, timestamp) {
-        // Process bot messages
-        if (response && response.length > 0) {
+        console.log("Processing response:", response);
+        
+        // Check if response is an array (direct messages)
+        if (Array.isArray(response)) {
             response.forEach(message => {
+                if (message.text) {
+                    addMessageToChat('bot', message.text, timestamp);
+
+                    // Save bot response to database
+                    window.mailoDB.saveConversation({
+                        sender: 'bot',
+                        message: message.text,
+                        context: conversationContext,
+                        timestamp: timestamp.toISOString()
+                    });
+                }
+            });
+            return;
+        }
+        
+        // Handle messages
+        if (response.messages && response.messages.length > 0) {
+            response.messages.forEach(message => {
                 if (message.text) {
                     addMessageToChat('bot', message.text, timestamp);
 
@@ -343,6 +538,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 ...conversationContext,
                 ...response.context
             };
+        }
+        
+        // If no response was processed, show a fallback message
+        if ((!response.messages || response.messages.length === 0) && 
+            (!response.actions || response.actions.length === 0)) {
+            addMessageToChat('bot', "I'm processing your request. Please give me a moment.", timestamp);
         }
     }
 
@@ -636,6 +837,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chatMessages.appendChild(messageDiv);
         scrollToBottom();
+
+        // If it's a bot message, read it out loud
+        if (sender === 'bot') {
+            window.speakText(text);
+        }
     }
 
     /**
@@ -1068,9 +1274,9 @@ function addSystemMessageToChat(text, timestamp = new Date()) {
     if (!text || text.trim() === '') return;
     
     // Add the message to chat
-    showTypingIndicator();
+    // showTypingIndicator();
     setTimeout(() => {
-        hideTypingIndicator();
+        // hideTypingIndicator();
         addMessageToChat('bot', text, timestamp);
         
         // Save this conversation to the database
@@ -1094,3 +1300,120 @@ function addSystemMessageToChat(text, timestamp = new Date()) {
 
 // Make the function available globally for the email service to use
 window.addSystemMessageToChat = addSystemMessageToChat;
+
+// Make the function available globally
+window.speakText = speakText;
+
+// Helper function for LLM action buttons to send messages to Rasa
+function sendToRasa(message) {
+    // Create a timestamp
+    const timestamp = new Date();
+    
+    // Show message in chat
+    addMessageToChat('user', message, timestamp);
+    
+    // Show typing indicator
+    showTypingIndicator();
+    
+    // Send to Rasa
+    fetch('/api/rasa_message', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: message, context: conversationContext })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        const responseTimestamp = new Date();
+        hideTypingIndicator();
+        
+        // Process response
+        handleRasaResponse(data, responseTimestamp);
+    })
+    .catch(error => {
+        console.error('Error communicating with Rasa:', error);
+        hideTypingIndicator();
+        addMessageToChat('bot', 'Sorry, I encountered an error processing that request.', new Date());
+    });
+}
+
+// Make sendToRasa available globally
+window.sendToRasa = sendToRasa;
+
+/**
+ * Add a bot message to the chat (for rich content like formatted emails)
+ * @param {string} html - HTML content to add as a bot message
+ * @param {Date} timestamp - Timestamp for the message
+ */
+function addBotMessageToChat(html, timestamp = new Date()) {
+    if (!html || typeof html !== 'string' || html.trim() === '') return;
+
+    const chatMessages = document.querySelector('.chat-messages');
+    if (!chatMessages) {
+        console.error('Chat messages container not found');
+        return;
+    }
+
+    const messageElement = document.createElement('div');
+    messageElement.className = 'message bot-message';
+
+    const timeString = timestamp.toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+    messageElement.innerHTML = `
+        <div class="message-avatar">
+            <i class="fa-solid fa-robot"></i>
+        </div>
+        <div class="message-content">
+            <div class="message-text">${html}</div>
+            <div class="message-time">${timeString}</div>
+        </div>
+    `;
+
+    chatMessages.appendChild(messageElement);
+    scrollToBottom();
+
+    // Attach event listeners to email cards
+    attachEmailCardListeners();
+}
+
+/**
+ * Attach event listeners to email cards
+ */
+function attachEmailCardListeners() {
+    const emailCards = document.querySelectorAll('.email-card:not([data-listener-attached])');
+    emailCards.forEach(card => {
+        card.addEventListener('click', handleEmailCardClick);
+        card.setAttribute('data-listener-attached', 'true');
+    });
+}
+
+/**
+ * Handle click on an email card in the chat
+ * @param {Event} e - Click event
+ */
+function handleEmailCardClick(e) {
+    const emailId = e.currentTarget.getAttribute('data-email-id');
+    if (!emailId) return;
+
+    showTypingIndicator();
+
+    window.emailService.getFullEmailContent(emailId).then(email => {
+        hideTypingIndicator();
+        if (email) {
+            const formattedEmail = formatEmailForDisplay(email);
+            addMessageToChat('bot', formattedEmail, new Date());
+        } else {
+            addMessageToChat('bot', 'Sorry, I couldn\'t retrieve that email.', new Date());
+        }
+    }).catch(error => {
+        console.error('Error retrieving email:', error);
+        hideTypingIndicator();
+        addMessageToChat('bot', 'Sorry, there was an error retrieving that email.', new Date());
+    });
+}

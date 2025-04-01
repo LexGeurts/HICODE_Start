@@ -46,9 +46,8 @@ intents:
   - reply_to_email
   - open_email
   
-  # Entity mention intents (add these)
+  # Entity mention intents
   - mention_sender
-  - mention_email_id
 
   # Add new LLM feature intents
   - summarize_email
@@ -61,6 +60,7 @@ intents:
   - test_email_connection
 
 entities:
+  - affirm
   - main_task
   - email_task
   - draft_task
@@ -69,7 +69,11 @@ entities:
   - sender
   - date
   - subject
-  - email_id
+  - recipient
+  - tone
+  - content
+  - email_confirm
+  - auto_draft
   - folder
   - attachment_type
   - search_term
@@ -80,6 +84,15 @@ entities:
 # Define slots here                            
 #########################################################
 slots:
+  affirm:
+    type: bool
+    initial_value: false
+    mappings:
+      - type: from_llm
+        allow_nlu_correction: true
+      - type: from_entity 
+        entity: affirm
+
   main_task:
     type: text
     mappings:
@@ -107,94 +120,99 @@ slots:
   email_connected:
     type: bool
     mappings:
-      - type: from_llm
+      - type: controlled
 
   has_emails:
     type: bool
     mappings:
-      - type: from_llm
+      - type: controlled
 
   mcp_context:
     type: any
     mappings:
-      - type: from_llm
+      - type: controlled
 
   emails:
     type: any
     mappings:
+      - type: controlled
+
+  sender:
+    type: text
+    mappings:
+      - type: controlled
+        entity: sender
+
+  recipient:
+    type: text
+    mappings:
       - type: from_llm
+
+  tone:
+    type: categorical
+    values:
+      - professional
+      - friendly
+      - formal
+
+  email_confirm:
+    type: categorical
+    values:
+      - send
+      - edit
+      - save
+
+  subject:
+    type: text
+    mappings:
+      - type: from_llm
+
+  content:
+    type: text
+    mappings:
+      - type: from_llm
+
+  auto_draft:
+    type: categorical
+    values:
+      - yes
+      - no
+
+  draft_saved:
+    type: bool
+    mappings:
+      - type: controlled
+
+  draft_generated:
+    type: bool
+    mappings:
+      - type: controlled
+
+  draft_email:
+    type: any
+    mappings:
+      - type: controlled
+
+  draft_saved_to_imap:
+    type: any
+    mappings:
+      - type: controlled
+
+  email_sent:
+    type: bool
+    mappings:
+      - type: controlled
+
+  send_error:
+    type: any
+    mappings:
+      - type: controlled
 
   email_filter:
     type: text
     mappings:
       - type: from_entity
         entity: email_filter
-
-  
-        
-  # Email flow slots
-  email_action:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  search_criteria:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  search_term:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  further_email_action:
-    type: bool
-    influence_conversation: true
-    mappings:
-      - type: from_intent
-        intent: affirm
-        value: true
-      - type: from_intent
-        intent: deny
-        value: false
-        
-  read_option:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  forwarding_email:
-    type: bool
-    influence_conversation: true
-    mappings:
-      - type: from_intent
-        intent: forward_email
-        value: true
-        
-  current_email_id:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-      
-  email_id:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_entity
-        entity: email_id
-        
-  # IMAP Settings slot
-  imap_settings:
-    type: any
-    influence_conversation: false
-    mappings:
-      - type: custom
 
 #########################################################
 # Define responses                           
@@ -226,6 +244,10 @@ responses:
       metadata:
         rephrase: True
 
+  utter_affirm:
+    - text: "Please confirm."
+      metadata:
+        rephrase: True
   
   # Main flow responses
   utter_welcome:
@@ -280,7 +302,9 @@ responses:
     - text: "Your inbox is empty. No emails to display."
   
   utter_email_actions:
-    - text: "What would you like to do with your emails? You can ask me to read specific emails, mark them as read, or archive them."
+    - text: "What would you like to do with your emails? You can ask me to check if you have new email(s) or ask me search and read specific email(s)."
+      metadata:
+        rephrase: True
     
   utter_ask_email_action:
     - text: "What would you like to do with your email? You can check new emails, read specific emails, or search for emails."
@@ -308,6 +332,9 @@ responses:
     - text: "Your draft is ready. Would you like to send it, edit it, or save it as a draft?"
   
   # Read email responses
+  utter_ask_sender:
+    - text: "Who is the sender of the email you want to search/read?"
+
   utter_post_read_options:
     - text: "What would you like to do with this email? You can reply, forward, archive, or delete it."
 
@@ -318,9 +345,23 @@ responses:
   utter_ask_tone:
     - text: "What tone would you like for your email? (professional, friendly, formal)"
 
+  utter_ask_recipient:
+    - text: "Who would you like to send this email to? Please provide the recipient's email address."
+
+  utter_ask_email_confirm:
+    - text: "Would you like to send, edit, or save this email as a draft?"
+
+  utter_ask_auto_draft:
+    - text: "Would you like me to help draft for you?"
+      metadata:
+        rephrase: True
+
   # Additional responses
   utter_read_email:
     - text: "I will help you get and read your email"
+
+  utter_search_emails:
+    - text: "I will help you search and read the email"
 
   utter_setup_email:
     - text: "To set up your email, go to the settings panel and enter your IMAP server details. You'll need your email server, username, password, and port. Let me know when you're ready to test the connection."
@@ -329,7 +370,7 @@ responses:
     - text: "I found some emails, would you like to me to read it."
 
   utter_no_emails_found:
-    - text: "I couldn't find any emails in your inbox."
+    - text: "I couldn't find any email."
 
   utter_email_connection_failed:
     - text: "I couldn't connect to your email server. Please check your settings and try again."
@@ -356,7 +397,7 @@ responses:
     - text: "Your draft has been discarded. Is there anything else you'd like to do?"
 
   utter_draft_email:
-    - text: "I'll help you draft a new email. Who would you like to send it to?"
+    - text: "I'll help you draft the email."
       metadata:
         rephrase: True
 
@@ -365,9 +406,6 @@ responses:
 
   utter_forward_email:
     - text: "I'll help you forward this email. Who would you like to forward it to?"
-
-  utter_mention_email_id:
-    - text: "I'll look for the email with that ID. One moment please..."
 
   utter_mention_sender:
     - text: "I'll find emails from that sender. Let me search your inbox..."
@@ -424,14 +462,11 @@ responses:
       metadata:
         rephrase: True
 
-  # Override the default pattern configuration            
-  utter_cannot_handle:
-    - text: Working around the request.
-      metadata:
-        rephrase: True
-
 #########################################################
 # Define actions                          
 #########################################################
 actions:
   - action_check_emails
+  - action_save_draft
+  - action_send_email
+  - action_generate_draft

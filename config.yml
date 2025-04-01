@@ -34,8 +34,8 @@ pipeline:
   # Use LLM
   - name: CompactLLMCommandGenerator
     llm:
-      # model_group: openai-direct-gpt-4
-      model_group: gemini_llm
+      model_group: openai-direct-gpt-4
+      # model_group: gemini_llm
     flow_retrieval:
       active: true  # Enable structured flow retrieval
 

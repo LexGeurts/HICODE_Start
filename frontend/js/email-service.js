@@ -110,10 +110,29 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
                 if (recentEmails.length > 0) {
                     console.log(`Processing ${recentEmails.length} recent emails`);
                     
+                    // Format the emails for chat display
+                    const formattedEmailsForChat = this.formatEmailsForChatDisplay(recentEmails);
+                    
+                    // Add console.log to debug addBotMessageToChat availability
+                    console.log('addBotMessageToChat function available:', typeof window.addBotMessageToChat === 'function');
+                    
+                    // Make sure we display emails in chat (FIXED: directly check if function exists)
+                    if (typeof window.addBotMessageToChat === 'function' && !action.silent) {
+                        console.log('Displaying formatted emails in chat');
+                        window.addBotMessageToChat(formattedEmailsForChat, new Date());
+                        
+                        // Since we're showing the emails with a formatted message,
+                        // we don't need a separate system message
+                        action.silent = true;
+                    } else {
+                        console.warn('addBotMessageToChat function not available or action is silent');
+                    }
+                    
+                    // Process each email for database storage
                     recentEmails.forEach(email => {
                         try {
                             const formattedEmail = this.formatMCPEmail(email);
-                            console.log('Formatted email:', formattedEmail);
+                            console.log('Formatted email for DB:', formattedEmail);
                             
                             // Save to DB and notify
                             this.saveAndNotifyEmail(formattedEmail);
@@ -129,6 +148,7 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
                 }
 
                 // Display email check results if this isn't a silent check
+                // and no emails were shown (otherwise it would be redundant)
                 if (!action.silent && window.addSystemMessageToChat) {
                     let message = "I've checked your emails.";
                     
@@ -145,6 +165,14 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
                 case 'email_notification':
                     // Handle notification about new emails from background checker
                     if (action.emails && Array.isArray(action.emails)) {
+                        // Format the emails for chat display
+                        const formattedEmailsForChat = this.formatEmailsForChatDisplay(action.emails);
+                        
+                        // Display emails in chat if window.addBotMessageToChat exists
+                        if (window.addBotMessageToChat) {
+                            window.addBotMessageToChat(formattedEmailsForChat, new Date());
+                        }
+                        
                         action.emails.forEach(email => {
                             // Save to DB and notify
                             this.saveAndNotifyEmail(email);
@@ -205,7 +233,7 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
 
             // Set up interval for checking emails
             this.checkInterval = setInterval(() => {
-                this.checkEmails();
+                // this.checkEmails();
             }, EMAIL_CHECK_INTERVAL);
         }
 
@@ -250,6 +278,9 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
 
                 console.log('Checking for new emails...');
                 this.lastCheckTime = new Date();
+
+                // Show typing indicator
+                // showTypingIndicator();
 
                 // Send check email request to Rasa with IMAP settings
                 const response = await this.sendCheckEmailRequest(settings, {
@@ -308,10 +339,12 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
             try {
                 const requestOptions = {
                     folder: this.currentFolder,
-                    limit: 10,
+                    limit: 5, // Reduced limit to prevent timeout
                     ...options
                 };
 
+                console.log('Sending email check request with options:', requestOptions);
+                
                 const response = await fetch('/api/rasa_message', {
                     method: 'POST',
                     headers: {
@@ -323,7 +356,8 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
                             imap_settings: settings,
                             action: "check_email",
                             options: requestOptions,
-                            email_limit: requestOptions.limit
+                            email_limit: requestOptions.limit,
+                            chunk_size: 5 // Add chunking parameter to help server process in batches
                         }
                     })
                 });
@@ -353,7 +387,9 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
 
                 // Return a minimal valid response to avoid breaking the app
                 return {
-                    messages: [],
+                    messages: [{
+                        text: "I encountered an error checking your emails. This might be due to a slow connection or a large number of emails. Try again with a smaller limit."
+                    }],
                     context: {
                         connected: false,
                         error: error.message,
@@ -769,6 +805,313 @@ const SIMULATION_PROBABILITY = 0.2; // 20% chance of generating emails in demo m
             } catch (error) {
                 console.error('Error refreshing emails:', error);
                 return false;
+            }
+        }
+
+        /**
+         * Format emails for displaying in chat
+         * @param {Array} emails - Array of emails to format
+         * @returns {string} - HTML formatted string for chat display
+         */
+        formatEmailsForChatDisplay(emails) {
+            if (!emails || emails.length === 0) {
+                return "No emails found.";
+            }
+
+            // Start with a header with email count and unread count
+            const unreadCount = emails.filter(email => !email.read).length;
+            
+            let formattedOutput = `<div class="email-summary-container">
+                <h3>Recent Emails (${emails.length}${unreadCount > 0 ? `, ${unreadCount} unread` : ''})</h3>
+                <div class="email-list">`;
+
+            // Add each email as a card
+            emails.forEach((email, index) => {
+                // Format the date to be more readable
+                let dateStr = "Unknown date";
+                try {
+                    const date = new Date(email.date || email.timestamp);
+                    dateStr = date.toLocaleString();
+                } catch (e) {
+                    console.warn("Error parsing date:", e);
+                }
+
+                // Format the sender (extract name if possible)
+                const from = email.from || "Unknown sender";
+                const fromParts = from.split('<');
+                const senderName = fromParts[0].trim() || from;
+                
+                // Get a short preview of the body
+                const bodyPreview = (email.body || email.content || "")
+                    .replace(/<[^>]*>/g, '') // Remove HTML tags
+                    .substring(0, 100) + ((email.body?.length > 100 || email.content?.length > 100) ? '...' : '');
+                
+                // Check if email is unread to style it differently
+                const unreadClass = email.read ? '' : 'unread-email';
+                const attachmentIcon = email.has_attachments ? '<i class="fa-solid fa-paperclip attachment-icon"></i>' : '';
+                
+                // Create a card for this email
+                formattedOutput += `
+                <div class="email-card ${unreadClass}" data-email-id="${email.id || email.messageId || ''}">
+                    <div class="email-header">
+                        <div class="email-sender">${senderName}</div>
+                        <div class="email-date">${dateStr}</div>
+                    </div>
+                    <div class="email-subject">${attachmentIcon} ${email.subject || "(No subject)"}</div>
+                    <div class="email-preview">${bodyPreview}</div>
+                </div>`;
+            });
+
+            // Close the container
+            formattedOutput += `</div>
+                <div class="email-footer">
+                    <button onclick="window.showInboxView()">View All Emails</button>
+                </div>
+            </div>`;
+
+            // Add some inline CSS for the email display
+            formattedOutput += `
+            <style>
+                .email-summary-container {
+                    max-width: 100%;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    background: #f9f9f9;
+                    margin: 10px 0;
+                }
+                .email-summary-container h3 {
+                    padding: 10px 15px;
+                    margin: 0;
+                    background: #f0f0f0;
+                    border-bottom: 1px solid #ddd;
+                }
+                .email-list {
+                    max-height: 400px;
+                    overflow-y: auto;
+                }
+                .email-card {
+                    padding: 10px 15px;
+                    border-bottom: 1px solid #eee;
+                    background: white;
+                    cursor: pointer;
+                    transition: background 0.2s;
+                }
+                .email-card:hover {
+                    background: #f5f5f5;
+                }
+                .email-card.unread-email {
+                    background: #f0f7ff;
+                    border-left: 3px solid #4c84ff;
+                }
+                .email-header {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 5px;
+                }
+                .email-sender {
+                    font-weight: bold;
+                    color: #444;
+                }
+                .email-date {
+                    color: #888;
+                    font-size: 0.9em;
+                }
+                .email-subject {
+                    font-weight: 500;
+                    margin-bottom: 5px;
+                }
+                .attachment-icon {
+                    color: #888;
+                    margin-right: 5px;
+                }
+                .email-preview {
+                    color: #666;
+                    font-size: 0.9em;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .email-footer {
+                    padding: 10px;
+                    text-align: center;
+                    background: #f0f0f0;
+                }
+                .email-footer button {
+                    padding: 6px 12px;
+                    background: #4c84ff;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                }
+                .email-footer button:hover {
+                    background: #3a6fd8;
+                }
+            </style>`;
+
+            return formattedOutput;
+        }
+
+        /**
+         * Get full email content by ID
+         * @param {string|number} emailId - ID of the email to retrieve
+         * @returns {Promise<Object|null>} - Email object or null if not found
+         */
+        async getFullEmailContent(emailId) {
+            try {
+                console.log(`Getting full email content for ID: ${emailId}`);
+                
+                // First try to get from local database
+                if (window.mailoDB && window.mailoDB.db) {
+                    const email = await window.mailoDB.db.emails.get(parseInt(emailId));
+                    if (email) {
+                        console.log('Found email in local database:', email);
+                        return email;
+                    }
+                }
+                
+                // If not in database and we're connected to email server, try to fetch
+                if (this.connected) {
+                    console.log('Email not found in database, fetching from server...');
+                    // Load settings
+                    const settings = await window.mailoDB.getImapSettings();
+                    if (!settings) {
+                        throw new Error('No email settings available');
+                    }
+                    
+                    // Send request to fetch email via Rasa/MCP
+                    const response = await fetch('/api/rasa_message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: "get full email content",
+                            context: {
+                                imap_settings: settings,
+                                action: "get_email",
+                                email_id: emailId
+                            }
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Check for email in response
+                    if (data.context && data.context.email) {
+                        const email = this.formatMCPEmail(data.context.email);
+                        // Save to database for future reference
+                        await this.saveAndNotifyEmail(email, false);
+                        return email;
+                    }
+                }
+                
+                throw new Error(`Email with ID ${emailId} not found`);
+            } catch (error) {
+                console.error('Error getting full email content:', error);
+                return null;
+            }
+        }
+
+        /**
+         * Execute email search with given criteria
+         * @param {Object} criteria - Search criteria object with optional keys: from, subject, text
+         * @returns {Promise<Array>} - Array of matching emails
+         */
+        async searchEmails(criteria) {
+            try {
+                console.log('Searching emails with criteria:', criteria);
+                
+                // First try to search local database
+                if (window.mailoDB && window.mailoDB.db) {
+                    // Build query based on criteria
+                    const emails = await window.mailoDB.db.emails.filter(email => {
+                        let match = true;
+                        
+                        if (criteria.from && typeof email.from === 'string') {
+                            match = match && email.from.toLowerCase().includes(criteria.from.toLowerCase());
+                        }
+                        
+                        if (criteria.subject && typeof email.subject === 'string') {
+                            match = match && email.subject.toLowerCase().includes(criteria.subject.toLowerCase());
+                        }
+                        
+                        if (criteria.text) {
+                            const text = criteria.text.toLowerCase();
+                            // Search in subject and body
+                            const subjectMatch = typeof email.subject === 'string' && 
+                                               email.subject.toLowerCase().includes(text);
+                            const bodyMatch = typeof email.body === 'string' && 
+                                             email.body.toLowerCase().includes(text);
+                            
+                            match = match && (subjectMatch || bodyMatch);
+                        }
+                        
+                        return match;
+                    }).toArray();
+                    
+                    console.log(`Found ${emails.length} matching emails in database`);
+                    
+                    if (emails.length > 0) {
+                        return emails;
+                    }
+                }
+                
+                // If no results in database or we want fresh results, search server
+                if (this.connected) {
+                    // Load settings
+                    const settings = await window.mailoDB.getImapSettings();
+                    if (!settings) {
+                        throw new Error('No email settings available');
+                    }
+                    
+                    // Send request to search emails via Rasa/MCP
+                    const response = await fetch('/api/rasa_message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: "search emails",
+                            context: {
+                                imap_settings: settings,
+                                action: "search_emails",
+                                search_criteria: criteria
+                            }
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Process search results
+                    if (data.context && data.context.search_results && Array.isArray(data.context.search_results)) {
+                        const formattedEmails = data.context.search_results.map(email => this.formatMCPEmail(email));
+                        
+                        // Save all emails to database
+                        for (const email of formattedEmails) {
+                            await this.saveAndNotifyEmail(email, false);
+                        }
+                        
+                        return formattedEmails;
+                    }
+                }
+                
+                // If nothing found or not connected
+                return [];
+            } catch (error) {
+                console.error('Error searching emails:', error);
+                return [];
             }
         }
     }

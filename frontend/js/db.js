@@ -109,19 +109,42 @@
     }
 
     /**
-     * Save email to the database
+     * Save an email to the database
      * @param {Object} emailData - Email data to save
      * @returns {Promise} - Promise that resolves with the new email ID
      */
     async function saveEmail(emailData) {
         try {
-            const id = await db.emails.add({
-                ...emailData,
-                timestamp: emailData.timestamp || new Date().toISOString(),
-                read: emailData.read || false
-            });
-            console.log(`Email saved with ID: ${id}`);
-            return id;
+            // If email with this messageId already exists, update it instead of adding new
+            let existingEmail = null;
+            
+            if (emailData.messageId) {
+                existingEmail = await db.emails
+                    .where('messageId')
+                    .equals(emailData.messageId)
+                    .first();
+            }
+            
+            if (existingEmail) {
+                // Update existing email
+                const updatedEmail = {
+                    ...existingEmail,
+                    ...emailData,
+                    id: existingEmail.id // Keep the same ID
+                };
+                
+                await db.emails.update(existingEmail.id, updatedEmail);
+                console.log(`Email updated with ID: ${existingEmail.id}`);
+                return existingEmail.id;
+            } else {
+                // Create new email
+                const id = await db.emails.add({
+                    ...emailData,
+                    timestamp: emailData.timestamp || new Date().toISOString()
+                });
+                console.log(`Email saved with ID: ${id}`);
+                return id;
+            }
         } catch (error) {
             console.error('Error saving email:', error);
             throw error;
@@ -130,24 +153,81 @@
 
     /**
      * Get emails from the database
-     * @param {Object} filter - Filter criteria
+     * @param {Object} options - Options for filtering emails
      * @returns {Promise} - Promise that resolves with an array of emails
      */
-    async function getEmails(filter = {}) {
+    async function getEmails(options = {}) {
         try {
-            let collection = db.emails;
-
-            if (filter.folder) {
-                collection = collection.where('folder').equals(filter.folder);
+            let query = db.emails;
+            
+            // Filter by folder if specified
+            if (options.folder) {
+                query = query.where('folder').equals(options.folder);
             }
-
-            if (filter.read !== undefined) {
-                collection = collection.where('read').equals(filter.read);
+            
+            // Filter by read/unread status if specified
+            if (options.read !== undefined) {
+                query = query.filter(email => email.read === options.read);
             }
-
-            return await collection.reverse().sortBy('timestamp');
+            
+            // Sort by timestamp (newest first)
+            const emails = await query.toArray();
+            return emails.sort((a, b) => {
+                return new Date(b.timestamp) - new Date(a.timestamp);
+            });
         } catch (error) {
             console.error('Error fetching emails:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Mark email as read
+     * @param {number} emailId - ID of the email to mark as read
+     * @returns {Promise} - Promise that resolves when the operation is complete
+     */
+    async function markEmailAsRead(emailId) {
+        try {
+            await db.emails.update(emailId, { read: true });
+            console.log(`Email ${emailId} marked as read`);
+            return true;
+        } catch (error) {
+            console.error('Error marking email as read:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Search emails
+     * @param {Object} criteria - Search criteria
+     * @returns {Promise} - Promise that resolves with matching emails
+     */
+    async function searchEmails(criteria) {
+        try {
+            return await db.emails
+                .filter(email => {
+                    let match = true;
+                    
+                    if (criteria.from) {
+                        match = match && email.from.toLowerCase().includes(criteria.from.toLowerCase());
+                    }
+                    
+                    if (criteria.subject) {
+                        match = match && email.subject.toLowerCase().includes(criteria.subject.toLowerCase());
+                    }
+                    
+                    if (criteria.text) {
+                        const text = criteria.text.toLowerCase();
+                        const subjectMatch = email.subject.toLowerCase().includes(text);
+                        const bodyMatch = email.body.toLowerCase().includes(text);
+                        match = match && (subjectMatch || bodyMatch);
+                    }
+                    
+                    return match;
+                })
+                .toArray();
+        } catch (error) {
+            console.error('Error searching emails:', error);
             throw error;
         }
     }
@@ -160,6 +240,8 @@
         getImapSettings,
         saveEmail,
         getEmails,
+        markEmailAsRead,
+        searchEmails,
         db
     };
 
