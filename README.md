@@ -132,6 +132,9 @@ This script will:
 5. **Settings**
    - Configure IMAP settings for your email account.
 
+6. **Translation**
+   - Auto translate emails and drafts to desired languages - Coming soon.
+
 ---
 
 ### Configuration
@@ -175,6 +178,7 @@ The backend consists of:
 
 ## Next Steps
 
+- **Email Translation**: Automatically translate emails and drafts to other languages.
 - **Email Categorization**: Automatically categorize emails based on content.
 - **Priority Sorting**: Highlight important emails.
 - **Authentication**: Add user authentication for secure access.
