@@ -7,11 +7,11 @@ flows:
       - intent: draft_email
       - intent: reply_to_email
     persisted_slots:
-      # - recipient
+      - recipient
       - tone
       - subject
       - auto_draft
-      # - email_confirm
+      - email_confirm
     steps:
       - collect: draft_task
         description: Ask user what they want to do with their emails.
