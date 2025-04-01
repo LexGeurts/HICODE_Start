@@ -1,39 +1,38 @@
 # MailoBot
 
-MailoBot is an AI-powered email assistant that helps monitor, organize, and manage emails. It uses Rasa Pro CALM for conversation management and OpenAI for advanced features like email drafting and RAG integration.
+MailoBot is an AI-powered email assistant designed to help users monitor, organize, and manage their emails efficiently. It leverages Rasa CALM for conversational AI and OpenAI for advanced email drafting and processing.
 
-## About Rasa Pro CALM
-
-MailoBot leverages Rasa Pro CALM (Conversational AI with Large Language Models) to create sophisticated conversation flows. CALM integrates the power of large language models like GPT with Rasa's robust dialogue management capabilities.
-
-Key benefits of using CALM in MailoBot:
-- Declarative flow management with JSON-based flow definitions
-- Integration with OpenAI's GPT models for natural language understanding and generation
-- Fallback mechanisms when predefined conversation paths are insufficient
-- Slot-based context tracking across conversation flows
+---
 
 ## Features
 
-- Modern, responsive UI with beautiful animations
-- Seamless email access via IMAP
-- Conversational AI powered by Rasa Pro CALM
-- Email drafting and analysis with OpenAI
+- **Email Management**: Access and manage emails via IMAP, including reading, searching, and marking emails as read.
+- **Email Drafting**: Generate professional email drafts using OpenAI's GPT models.
+- **Custom Actions**: Perform advanced email-related tasks like saving drafts and sending emails.
+- **Interactive UI**: A modern, responsive web interface for seamless interaction.
+- **Speech Recognition**: Use voice commands to interact with MailoBot.
+- **Database Integration**: Save and retrieve conversations and email settings using Dexie.js.
+
+---
 
 ## Project Structure
 
 ```
 mailobot/
-├── backend/                # Rasa backend
-│   ├── actions/            # Custom Rasa actions
-│   ├── data/               # Training data
-│   └── models/             # Trained models
-├── frontend/               # Web UI
+├── actions/                # Custom Rasa actions for email management
+├── config/                 # Configuration files (e.g., OpenAI settings)
+├── data/                   # Rasa training data and conversation flows
+├── frontend/               # Web-based user interface
 │   ├── css/                # Stylesheets
 │   ├── js/                 # JavaScript files
-│   └── assets/             # Static assets
-├── app.py                  # Flask server
+│   └── index.html          # Main HTML file
+├── prompts/                # Jinja2 templates for OpenAI prompts
+├── utils/                  # Utility modules (e.g., email handling, OpenAI integration)
+├── app.py                  # Flask server for backend API
 └── requirements.txt        # Python dependencies
 ```
+
+---
 
 ## Getting Started
 
@@ -42,34 +41,37 @@ mailobot/
 - Python (v3.8 or higher)
 - Pip (Python package manager)
 
+---
+
 ### Installation
 
 1. **Clone the repository**
 
-```bash
-git clone <repository-url>
-cd mailobot
-```
+   ```bash
+   git clone <repository-url>
+   cd mailobot
+   ```
 
 2. **Install dependencies**
 
-```bash
-# Install Python dependencies for Flask server
-pip install -r requirements.txt
+   ```bash
+   # Install Python dependencies for Flask server
+   pip install -r requirements.txt
 
-# Install Python dependencies for Rasa backend
-cd backend
-pip install -r requirements.txt
-cd ..
-```
+   # Install Python dependencies for Rasa backend
+   cd backend
+   pip install -r requirements.txt
+   cd ..
+   ```
 
 3. **Train the Rasa model**
 
-```bash
-cd backend
-rasa train
-cd ..
-```
+   ```bash
+   rasa train
+   cd ..
+   ```
+
+---
 
 ### Running the Application
 
@@ -82,46 +84,98 @@ You can run the application in two ways:
 ```
 
 This script will:
-- Start the Flask server (frontend) on port 3000
+
 - Start the Rasa server with proper CORS settings on port 5005
-- Press Ctrl+C to stop both servers
+- Start the Flask server (frontend) on port 5000
+- Press `Ctrl+C` to stop both servers
 
 #### Option 2: Starting servers manually
 
 1. **Start the Flask server**
 
-```bash
-python app.py
-```
+   ```bash
+   python app.py
+   ```
 
 2. **Start the Rasa server (in a separate terminal)**
 
-```bash
-rasa run --enable-api --cors "*"
-```
+   ```bash
+   rasa run --enable-api --cors "*"
+   ```
 
-> **IMPORTANT**: The `--cors "*"` parameter is essential for the frontend to communicate with the Rasa API. Without it, you'll encounter CORS errors in your browser.
+   > **IMPORTANT**: The `--cors "*"` parameter is essential for the frontend to communicate with the Rasa API. Without it, you'll encounter CORS errors in your browser.
 
 3. **Access the application**
 
-Open your browser and navigate to `http://localhost:3000`
+   Open your browser and navigate to `http://localhost:5000`
+
+---
+
+## Usage
+
+### Key Functionalities
+
+1. **Email Management**
+   - Check unread emails in your inbox.
+   - Search for emails by sender, subject, or keywords.
+
+2. **Email Drafting**
+   - Generate email drafts with tone using OpenAI.
+   - Save drafts to your email provider's drafts folder.
+
+3. **Email Sending**
+   - Send emails directly from the application.
+
+4. **Conversation History**
+   - View and manage past conversations with MailoBot - Coming soon.
+
+5. **Settings**
+   - Configure IMAP settings for your email account.
+
+---
+
+### Configuration
+
+#### OpenAI Integration
+
+MailoBot uses OpenAI's GPT models for email drafting and processing. To enable this feature:
+
+1. Set up your OpenAI API key as an environment variable:
+
+   ```bash
+   export OPENAI_API_KEY=<your-api-key>
+   ```
+
+2. (Optional) Configure additional OpenAI settings in `config/openai.yml`.
+
+#### IMAP Settings
+
+IMAP settings can be configured via the settings modal in the frontend or by editing the `settings/imap_settings.json` file.
+
+---
 
 ## Development
 
-- **Start an interactive Rasa shell**
+### Frontend
 
-```bash
-cd backend
-rasa shell
-```
+The frontend is built using HTML, CSS, and JavaScript. Key files include:
+
+- `frontend/index.html`: Main HTML file.
+- `frontend/js/`: JavaScript files for client-side logic.
+- `frontend/css/`: Stylesheets for the UI.
+
+### Backend
+
+The backend consists of:
+
+- **Flask Server**: Handles API requests and serves the frontend.
+- **Rasa CALM**: Manages conversational AI and custom actions.
+
+---
 
 ## Next Steps
 
-- Integrate with email providers via IMAP
-- Implement OpenAI for advanced email processing
-- Set up authentication
-- Add email categorization and priority sorting
-
-## License
-
-This project is licensed under the ISC License - see the LICENSE file for details.
+- **Email Categorization**: Automatically categorize emails based on content.
+- **Priority Sorting**: Highlight important emails.
+- **Authentication**: Add user authentication for secure access.
+- **Enhanced Voice Commands**: Expand speech recognition capabilities.
