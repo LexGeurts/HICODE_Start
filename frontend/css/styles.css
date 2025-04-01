@@ -289,6 +289,7 @@ body {
     transition: height 0.2s ease;
 }
 
+.mic-button,
 .send-button {
     background-color: var(--primary-color);
     color: var(--white);
@@ -298,12 +299,74 @@ body {
     transition: var(--transition);
 }
 
+.mic-button {
+    background-color: var(--white);
+    color: var(--primary-color);
+    border-right: 1px solid var(--border-color);
+}
+
+.mic-button:hover {
+    background-color: #f0f0f0;
+}
+
+.mic-button.listening {
+    background-color: #ff4b4b;
+    color: var(--white);
+    animation: pulse 1.5s infinite;
+}
+
 .send-button:hover {
     background-color: #3b5cdd;
 }
 
-.send-button i {
+.send-button i,
+.mic-button i {
     font-size: 18px;
+}
+
+/* Voice Controls */
+.voice-controls {
+    display: flex;
+    justify-content: space-between;
+    margin: 8px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.voice-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.voice-toggle input {
+    margin: 0;
+    cursor: pointer;
+}
+
+.voice-toggle span {
+    font-weight: 500;
+}
+
+.voice-indicator {
+    color: #ff4b4b;
+    font-weight: 500;
+    display: none;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+    }
 }
 
 /* Chat Suggestions */
@@ -326,8 +389,8 @@ body {
 
 .suggestion-chip:hover {
     background-color: var(--primary-light);
+    border-color: var(--primary-color);
     color: var(--primary-color);
-    border-color: var(--primary-light);
 }
 
 /* Scrollbar Styling */
@@ -578,7 +641,7 @@ body {
 
 .btn-secondary {
     background-color: var(--light-color);
-    color: var(--text-primary);
+    color: var (--text-primary);
     border: 1px solid var(--border-color);
     padding: 10px 15px;
     border-radius: var(--border-radius);

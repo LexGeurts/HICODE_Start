@@ -10,3 +10,9 @@ flows:
       - intent: help
     steps:
       - action: utter_help
+
+  pattern_cannot_handle:
+    description: Pattern for handling unrecognized email tasks.
+    steps:
+      - action: utter_help
+        next: END

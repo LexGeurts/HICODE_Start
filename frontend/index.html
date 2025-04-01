@@ -57,8 +57,8 @@
                         </div>
                         <div class="message-content">
                             <div class="message-text">
-                                <p>Hello! I'm MailoBot, your email assistant. I can help you organize your inbox, draft
-                                    responses, and more. How can I help you today?</p>
+                                <p>Hello! I'm MailoBot, your email assistant. I can help you draft
+                                    email, and more. How can I help you today?</p>
                             </div>
                             <div class="message-time">
                                 <script>
@@ -74,14 +74,24 @@
                 <div class="chat-input-container">
                     <div class="chat-input">
                         <textarea placeholder="Type a message..." rows="1"></textarea>
+                        <button class="mic-button" title="Speak your message">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
                         <button class="send-button">
                             <i class="fa-solid fa-paper-plane"></i>
                         </button>
                     </div>
+                    <div class="voice-controls">
+                        <label class="voice-toggle">
+                            <input type="checkbox" id="autoReadResponses" checked>
+                            <span>Auto-read responses</span>
+                        </label>
+                        <div class="voice-indicator">Listening...</div>
+                    </div>
                     <div class="chat-suggestions">
-                        <div class="suggestion-chip">Organize my inbox</div>
-                        <div class="suggestion-chip">Draft an email</div>
-                        <div class="suggestion-chip">Show unread emails</div>
+                        <div class="suggestion-chip">Check my emails</div>
+                        <div class="suggestion-chip">Read email from </div>
+                        <div class="suggestion-chip">Translate email to </div>
                     </div>
                 </div>
             </div>
@@ -160,8 +170,9 @@
             }
         }, 100);
     </script>
-    <script src="js/email-service.js"></script>
+    <script src="js/rasa-api.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/email-service.js"></script>
 </body>
 
 </html>
