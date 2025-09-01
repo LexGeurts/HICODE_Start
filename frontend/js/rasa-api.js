@@ -1,15 +1,9 @@
-/**
- * MailoBot Rasa API Helper
- * This file provides improved API communication with the Rasa backend
- */
-
 class RasaAPI {
     constructor() {
-        this.baseUrl = '/api/rasa_message';
+        this.baseUrl = '/api/send_message';
         this.maxRetries = 2;
         this.retryDelay = 1000; // 1 second
         this.defaultTimeout = 15000; // 15 seconds (increased from 10)
-        this.longOperationTimeout = 45000; // 45 seconds for email operations (increased from 30)
         
         // Keep track of pending requests to avoid duplicates
         this.pendingRequests = new Map();
@@ -69,13 +63,7 @@ class RasaAPI {
      * @private
      */
     async _executeRequest(message, context = {}, options = {}) {
-        const isEmailOperation = message.toLowerCase().includes('email') && 
-            (message.toLowerCase().includes('check') || 
-             message.toLowerCase().includes('search') || 
-             message.toLowerCase().includes('read'));
-        
-        // Use longer timeout for email operations
-        const timeout = isEmailOperation ? this.longOperationTimeout : this.defaultTimeout;
+        const timeout = this.defaultTimeout;
         
         let retries = 0;
         let lastError = null;
@@ -146,9 +134,7 @@ class RasaAPI {
         // Return a graceful error response
         return this.createErrorResponse(
             lastError.message,
-            isEmailOperation 
-                ? "I'm having trouble accessing your emails. This might be due to a slow connection or a large number of emails. Please try again with a smaller limit or check your email server."
-                : "I'm sorry, I encountered a problem communicating with my backend. Please try again later.",
+            "I'm sorry, I encountered a problem communicating with my backend. Please try again later.",
             context
         );
     }

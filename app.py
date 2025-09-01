@@ -20,15 +20,12 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 DEFAULT_RASA_URL = 'http://localhost:5005/webhooks/rest/webhook'
 
 # Serve frontend files
-
-
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_static(path):
     if path and os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
     return send_from_directory(app.static_folder, 'index.html')
-
 
 @app.route('/api/check_rasa', methods=['GET'])
 def check_rasa():
@@ -44,54 +41,10 @@ def check_rasa():
         logger.error(f"Failed to connect to Rasa server: {str(e)}")
         return jsonify({"status": "unavailable", "reason": str(e)}), 503
 
-# Endpoint to send message to Rasa and get response
 
-
+# Handle Rasa messages
 @app.route('/api/send_message', methods=['POST'])
 def send_message():
-    data = request.json
-    message = data.get('message')
-    context = data.get('context', {})
-
-    rasa_url = os.environ.get('RASA_URL', DEFAULT_RASA_URL)
-    payload = {
-        "sender": "user",
-        "message": message,
-        "metadata": context
-    }
-
-    try:
-        # Set shorter timeout to prevent long waits on failures
-        response = requests.post(rasa_url, json=payload, timeout=10)
-        response.raise_for_status()
-        return jsonify(response.json())
-    except Timeout:
-        error_message = "Request to Rasa server timed out. Please check if the server is running and responsive."
-        logger.error(error_message)
-        return jsonify({
-            "error": error_message,
-            "fallback_response": [{"text": "I'm sorry, I couldn't process your request in time. Please try again later."}]
-        }), 504
-    except ConnectionError:
-        error_message = "Could not connect to Rasa server. Please check if the server is running."
-        logger.error(error_message)
-        return jsonify({
-            "error": error_message,
-            "fallback_response": [{"text": "I'm having trouble connecting to my backend services. Please ensure the Rasa server is running."}]
-        }), 503
-    except RequestException as e:
-        error_message = f"Error communicating with Rasa server: {str(e)}"
-        logger.error(error_message)
-        return jsonify({
-            "error": error_message,
-            "fallback_response": [{"text": "I'm sorry, I encountered an error processing your request. Please try again later."}]
-        }), 500
-
-# New endpoint to handle Rasa messages
-
-
-@app.route('/api/rasa_message', methods=['POST'])
-def rasa_message():
     data = request.json
     message = data.get('message')
     context = data.get('context', {})
@@ -142,14 +95,6 @@ def process_rasa_response(response, original_context):
             if json_data.get("action"):
                 action = json_data["action"]
                 result["actions"].append(action)
-                
-                # For email checking actions, ensure we update the context properly
-                if action.get("name") == "check_email":
-                    # Make sure we include unread count in the context
-                    if action.get("unread_count") is not None:
-                        if not result["context"].get("email"):
-                            result["context"]["email"] = {}
-                        result["context"]["email"]["unread_count"] = action["unread_count"]
             
             # Update context with any new information
             if json_data.get("context"):
@@ -187,27 +132,9 @@ def process_rasa_response(response, original_context):
 
     return result
 
-@app.route('/api/save_imap_settings', methods=['POST'])
-def save_imap_settings():
-    try:
-        settings = request.json
-        
-        # Ensure the settings directory exists
-        settings_dir = os.path.join(app.root_path, 'settings')
-        os.makedirs(settings_dir, exist_ok=True)
-        
-        # Save settings to JSON file
-        settings_file = os.path.join(settings_dir, 'imap_settings.json')
-        with open(settings_file, 'w') as f:
-            json.dump(settings, f, indent=4)
-        
-        return jsonify({"success": True, "message": "IMAP settings saved successfully"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
-    logger.info(f"MailoBot server running on http://localhost:{port}")
+    logger.info(f"Chatbot server running on http://localhost:{port}")
     logger.info("To use with Rasa, make sure to start the Rasa server with:")
     logger.info("  - rasa run --enable-api --cors \"*\"")
     app.run(debug=True, port=port)

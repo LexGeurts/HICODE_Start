@@ -1,52 +1,13 @@
 recipe: default.v1
-
-# The assistant project unique identifier
-assistant_id: mailobot_assistant
-
-# Language settings
 language: en
-
-# Pipeline configuration with CALM integration
 pipeline:
-  - name: WhitespaceTokenizer
-  - name: RegexFeaturizer
-  - name: LexicalSyntacticFeaturizer
-  - name: CountVectorsFeaturizer
-  - name: CountVectorsFeaturizer
-    analyzer: char_wb
-    min_ngram: 1
-    max_ngram: 4
-  - name: DIETClassifier
-    epochs: 100
-    constrain_similarities: true
-  - name: EntitySynonymMapper
-  - name: ResponseSelector
-    epochs: 100
-    constrain_similarities: true
-  
-  - name: NLUCommandAdapter
-  
-  # Use standard FallbackClassifier instead of CALM components
-  - name: FallbackClassifier
-    threshold: 0.7
-    ambiguity_threshold: 0.1
-  
-  # Use LLM
-  - name: CompactLLMCommandGenerator
-    llm:
-      model_group: openai-direct-gpt-4
-      # model_group: gemini_llm
-    flow_retrieval:
-      active: true  # Enable structured flow retrieval
+- name: CompactLLMCommandGenerator
+  llm:
+    model_group: rasa_command_generation_model
+  flow_retrieval:
+    active: false
 
 policies:
-  - name: FlowPolicy
-  - name: MemoizationPolicy
-  # - name: RulePolicy
-  - name: TEDPolicy
-    epochs: 100
-    constrain_similarities: true
-
-  # Intentless Policy for LLM
-  - name: IntentlessPolicy
-    prompt: data/prompts/email-draft-prompt.jinja2
+- name: FlowPolicy
+#  - name: EnterpriseSearchPolicy
+assistant_id: 20250827-154803-coal-resin

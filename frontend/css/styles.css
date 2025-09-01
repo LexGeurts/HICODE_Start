@@ -681,55 +681,6 @@ body {
     border: 1px solid var(--danger-color);
 }
 
-/* Email Provider Buttons */
-.email-provider-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 5px;
-}
-
-.email-provider {
-    font-size: 13px;
-    padding: 5px 10px;
-}
-
-/* Email Display Styling */
-.email-view {
-    background-color: var(--light-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 12px;
-    margin: 5px 0;
-}
-
-.email-header {
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    color: var(--text-secondary);
-    font-size: 14px;
-    line-height: 1.6;
-}
-
-.email-body {
-    padding: 8px 0;
-    white-space: pre-wrap;
-}
-
-.email-attachments {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--border-color);
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-.email-actions {
-    margin-top: 12px;
-    font-weight: 500;
-    color: var(--primary-color);
-}
-
 /* Formatted Text Styles */
 .message-text code {
     background-color: #f0f0f0;

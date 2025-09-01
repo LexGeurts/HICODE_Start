@@ -1,5 +1,7 @@
 .DS_Store
 .idea/
+.vscode/
+*.code-workspace
 
 # Settings directory - ignore completely
 settings/
@@ -27,6 +29,7 @@ venv.bak/
 
 # Distribution / packaging
 .Python
+**/__pycache__/
 build/
 develop-eggs/
 dist/
