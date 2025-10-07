@@ -17,11 +17,18 @@ function toggleSpeechRecognition() {
     }
 }
 
+speakTextQueue = [];
+
 /**
  * Speak text using text-to-speech
  * @param {string} text - Text to be spoken
  */
 function speakText(text) {
+    if (isSpeaking) {
+        speakTextQueue.push(text);
+        return;
+    }
+
     // Cancel any ongoing speech
     synth.cancel();
     
@@ -30,6 +37,8 @@ function speakText(text) {
     
     // Only continue if auto-read is enabled
     if (!autoReadCheckbox || !autoReadCheckbox.checked) return;
+
+    isSpeaking = true;
     
     // Clean text of HTML tags
     const cleanText = text.replace(/<[^>]*>?/gm, '');
@@ -56,12 +65,16 @@ function speakText(text) {
     utterance.volume = 1.0;
     
     utterance.onstart = () => {
-        isSpeaking = true;
         console.log('Speaking with voice:', utterance.voice ? utterance.voice.name : 'Default voice');
     };
     
     utterance.onend = () => {
         isSpeaking = false;
+
+        if (speakTextQueue.length > 0) {
+            const nextText = speakTextQueue.shift();
+            speakText(nextText);
+        }
     };
     
     utterance.onerror = (event) => {
@@ -176,14 +189,14 @@ document.addEventListener('DOMContentLoaded', () => {
         micButton.addEventListener('click', toggleSpeechRecognition);
         
         // Show voice controls since speech is supported
-        if (voiceControls) {
-            voiceControls.style.display = 'flex';
+        if (voiceIndicator) {
+            voiceIndicator.style.display = 'flex';
             console.log('Voice controls should be visible');
         }
     } else {
         // Hide mic button if speech recognition is not supported
         if (micButton) micButton.style.display = 'none';
-        if (voiceControls) voiceControls.style.display = 'none';
+        if (voiceIndicator) voiceIndicator.style.display = 'none';
         console.warn('Speech recognition not supported in this browser');
     }
 
@@ -196,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Load previous conversations for context
             const conversations = await loadRecentConversations();
             conversations.forEach((conversation) => {
-                addMessageToChat(conversation.sender, conversation.message, Date.parse(conversation.timestamp));
+                addMessageToChat(conversation.sender, conversation.message, Date.parse(conversation.timestamp), false);
             })
 
             console.log('Chatbot initialization complete');
@@ -419,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Add a message to the chat
      */
-    function addMessageToChat(sender, text, timestamp = new Date()) {
+    function addMessageToChat(sender, text, timestamp = new Date(), newMessage = true) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message');
         messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
@@ -468,7 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollToBottom();
 
         // If it's a bot message, read it out loud
-        if (sender === 'bot') {
+        if (sender === 'bot' && newMessage) {
             window.speakText(text);
         }
     }
