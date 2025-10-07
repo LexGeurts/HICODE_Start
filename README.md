@@ -1,5 +1,14 @@
 
 # Getting Started
+It's recommended to run this repository in GitHub Codespaces (in GitHub, press the green 'Code' button and then Codespaces). If you prefer to work in VS Code or another IDE, you need to manually run these commands:
+
+```
+pip install -U pip uv
+uv venv
+source .venv/bin/activate
+uv pip install --extra-index-url https://europe-west3-python.pkg.dev/rasa-releases/rasa-pro-python/simple rasa-pro
+uv pip install -r requirements.txt
+```
 
 ---
 
