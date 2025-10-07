@@ -10,6 +10,11 @@ uv pip install --extra-index-url https://europe-west3-python.pkg.dev/rasa-releas
 uv pip install -r requirements.txt
 ```
 
+Create a file called `.env` containing your license key:
+```
+RASA_LICENSE=<the Rasa license key you received when creating your developer account>
+```
+
 ---
 
 ## Installation
