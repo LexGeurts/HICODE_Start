@@ -1,28 +1,10 @@
 
-## Getting Started
-
-### Prerequisites
-
-- Python (v3.8 or higher)
-- Pip (Python package manager)
+# Getting Started
 
 ---
 
-### Installation
-
-1. **Install dependencies**
-
-   ```bash
-   # Install Python dependencies for Flask server
-   pip install -r requirements.txt
-
-   # Install Python dependencies for Rasa backend
-   cd backend
-   pip install -r requirements.txt
-   cd ..
-   ```
-
-2. **Train the Rasa model**
+## Installation
+**Train the Rasa model**
 
    ```bash
    rasa train
@@ -31,11 +13,11 @@
 
 ---
 
-### Running the Application
+## Running the Application
 
 You can run the application in two ways:
 
-#### Option 1: Using the convenience script
+### Option 1: Using the convenience script
 
 ```bash
 ./run.sh
@@ -47,7 +29,7 @@ This script will:
 - Start the Flask server (frontend) on port 5000
 - Press `Ctrl+C` to stop both servers
 
-#### Option 2: Starting servers manually
+### Option 2: Starting servers manually
 
 1. **Start the Flask server**
 
