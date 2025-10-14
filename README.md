@@ -60,6 +60,6 @@ This script will:
 
 3. **Access the application**
 
-   Open your browser and navigate to `http://localhost:5000`
+   Open your browser and navigate to `<your-codespace-id-xxxxx>-5000.app.github.dev` if you are running the app in Github codespaces, or `http://localhost:5000` if you are running it locally.
 
 ---
