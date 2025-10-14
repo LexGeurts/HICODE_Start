@@ -22,7 +22,6 @@ RASA_LICENSE=<the Rasa license key you received when creating your developer acc
 
    ```bash
    rasa train
-   cd ..
    ```
 
 ---
